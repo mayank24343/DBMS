@@ -1,93 +1,94 @@
-CREATE TABLE citizens (
-    	citizen_id SERIAL PRIMARY KEY,
-    	aadhar_no VARCHAR(12) UNIQUE NOT NULL,
-    	name VARCHAR(100) NOT NULL,
-    	dob DATE NOT NULL,
+CREATE TABLE citizen (
+    citizen_id SERIAL PRIMARY KEY,
+    aadhar_no VARCHAR(12) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    dob DATE NOT NULL,
 	sex CHAR(1) NOT NULL,
 	CHECK (sex IN ('M','F','O')),
-    	addr_l1 TEXT NOT NULL,
-    	addr_l2 TEXT NOT NULL,
-    	city VARCHAR(50) NOT NULL,
-    	state VARCHAR(50) NOT NULL,
-    	postal_code CHAR(6) NOT NULL,
-    	latitude DECIMAL(9,6) NOT NULL,
-    	longitude DECIMAL(9,6) NOT NULL
+    addr_l1 TEXT NOT NULL,
+    addr_l2 TEXT NOT NULL,
+    city VARCHAR(50) NOT NULL,
+    state VARCHAR(50) NOT NULL,
+    postal_code CHAR(6) NOT NULL,
+    latitude DECIMAL(9,6) NOT NULL,
+    longitude DECIMAL(9,6) NOT NULL
 );
 
 CREATE TABLE citizen_contact (
-    	id SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
    	citizen_id INT REFERENCES citizen(citizen_id) ON DELETE CASCADE,
-    	email VARCHAR(100),
-    	phone CHAR(10),
+    email VARCHAR(100),
+    phone CHAR(10),
 	CHECK ((phone IS NOT NULL AND email IS NULL) OR (phone IS NULL AND email IS NOT NULL)),
-    	is_primary BOOLEAN DEFAULT FALSE
+    is_primary BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE health_facility (
-    	id SERIAL PRIMARY KEY,
-    	name VARCHAR(100) NOT NULL,
-    	type VARCHAR(30) NOT NULL,
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(30) NOT NULL,
 	CHECK (type IN ('Hospital','Clinic','Pharmacy','Laboratory')),
 	addr_l1 TEXT NOT NULL,
-    	addr_l2 TEXT NOT NULL,
-    	city VARCHAR(50) NOT NULL,
-    	state VARCHAR(50) NOT NULL,
-    	postal_code CHAR(6) NOT NULL,
-    	latitude DECIMAL(9,6) NOT NULL,
-    	longitude DECIMAL(9,6) NOT NULL
+    addr_l2 TEXT NOT NULL,
+    city VARCHAR(50) NOT NULL,
+    state VARCHAR(50) NOT NULL,
+    postal_code CHAR(6) NOT NULL,
+    latitude DECIMAL(9,6) NOT NULL,
+    longitude DECIMAL(9,6) NOT NULL
 );
 
 CREATE TABLE healthfac_contact (
-    	id SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
    	healthfac_id INT REFERENCES health_facility(id) ON DELETE CASCADE,
-    	email VARCHAR(100),
-    	phone CHAR(10),
+    email VARCHAR(100),
+    phone CHAR(10),
 	CHECK ((phone IS NOT NULL AND email IS NULL) OR (phone IS NULL AND email IS NOT NULL)),
-    	is_primary BOOLEAN DEFAULT FALSE
+    is_primary BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE supplier (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
 	addr_l1 TEXT NOT NULL,
-    	addr_l2 TEXT NOT NULL,
-    	city VARCHAR(50) NOT NULL,
-    	state VARCHAR(50) NOT NULL,
-    	postal_code CHAR(6) NOT NULL,
-    	latitude DECIMAL(9,6) NOT NULL,
-    	longitude DECIMAL(9,6) NOT NULL
+    addr_l2 TEXT NOT NULL,
+    city VARCHAR(50) NOT NULL,
+    state VARCHAR(50) NOT NULL,
+    postal_code CHAR(6) NOT NULL,
+    latitude DECIMAL(9,6) NOT NULL,
+    longitude DECIMAL(9,6) NOT NULL
 
 );
 
 CREATE TABLE supplier_contact (
-    	id SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
    	supplier_id INT REFERENCES supplier(id) ON DELETE CASCADE,
-    	email VARCHAR(100),
-    	phone CHAR(10),
+    email VARCHAR(100),
+    phone CHAR(10),
 	CHECK ((phone IS NOT NULL AND email IS NULL) OR (phone IS NULL AND email IS NOT NULL)),
-    	is_primary BOOLEAN DEFAULT FALSE
+    is_primary BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE item (
     id SERIAL PRIMARY KEY,
 	type VARCHAR(30) NOT NULL,
     name VARCHAR(100) NOT NULL,
-    description TEXT
+    description TEXT,
+	CHECK (type IN ('medicine','vaccine','equipment','other'))
 );
 
 CREATE TABLE listing (
     id SERIAL PRIMARY KEY,
     supplier_id INT REFERENCES supplier(id),
     item_id INT NOT NULL REFERENCES item(id),
-    quantity INT,
-    price_per_item DECIMAL(10,2)
+    quantity INT NOT NULL,
+    price_per_item DECIMAL(10,2) NOT NULL
 );
 
 
 CREATE TABLE healthcareworker (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    role VARCHAR(50) NOT NULL,
+    role VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE skills (
@@ -137,7 +138,7 @@ CREATE TABLE prescription (
     instruction TEXT
 );
 
-medical_procedure (
+CREATE TABLE medical_procedure (
   procedure_id SERIAL PRIMARY KEY,
   name VARCHAR(150) NOT NULL,
   category VARCHAR(50) NOT NULL,        
@@ -181,7 +182,7 @@ CREATE TABLE procedure_provided (
 CREATE TABLE vaccination (
     id SERIAL PRIMARY KEY,
     citizen_id INT REFERENCES citizen(citizen_id),
-    vaccine_id INT REFERENCES vaccines(id),
+    vaccine_id INT REFERENCES item(id),
     vaccination_date DATE NOT NULL,
     dose_no INT NOT NULL,
     centre_id INT REFERENCES health_facility(id)
@@ -218,12 +219,12 @@ CREATE TABLE bed_allocs (
 CREATE TABLE warehouse (
     id SERIAL PRIMARY KEY,
     addr_l1 TEXT NOT NULL,
-    	addr_l2 TEXT NOT NULL,
-    	city VARCHAR(50) NOT NULL,
-    	state VARCHAR(50) NOT NULL,
-    	postal_code CHAR(6) NOT NULL,
-    	latitude DECIMAL(9,6) NOT NULL,
-    	longitude DECIMAL(9,6) NOT NULL
+    addr_l2 TEXT NOT NULL,
+    city VARCHAR(50) NOT NULL,
+    state VARCHAR(50) NOT NULL,
+    postal_code CHAR(6) NOT NULL,
+    latitude DECIMAL(9,6) NOT NULL,
+    longitude DECIMAL(9,6) NOT NULL
 
 );
 
@@ -265,6 +266,7 @@ CREATE TABLE disease_case (
     worker_id INT REFERENCES healthcareworker(id),
     patient_id INT REFERENCES citizen(citizen_id)
 );
+
 
 
 
