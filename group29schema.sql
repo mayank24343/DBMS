@@ -16,11 +16,12 @@ CREATE TABLE citizen (
 
 CREATE TABLE citizen_contact (
     id SERIAL PRIMARY KEY,
-   	citizen_id INT REFERENCES citizen(citizen_id) ON DELETE CASCADE,
+   	citizen_id INT,
     email VARCHAR(100),
     phone CHAR(10),
 	CHECK ((phone IS NOT NULL AND email IS NULL) OR (phone IS NULL AND email IS NOT NULL)),
-    is_primary BOOLEAN DEFAULT FALSE
+    is_primary BOOLEAN DEFAULT FALSE,
+	FOREIGN KEY citizen_id REFERENCES citizen(citizen_id) ON DELETE CASCADE
 );
 
 CREATE TABLE health_facility (
@@ -39,11 +40,12 @@ CREATE TABLE health_facility (
 
 CREATE TABLE healthfac_contact (
     id SERIAL PRIMARY KEY,
-   	healthfac_id INT REFERENCES health_facility(id) ON DELETE CASCADE,
+   	healthfac_id INT,
     email VARCHAR(100),
     phone CHAR(10),
 	CHECK ((phone IS NOT NULL AND email IS NULL) OR (phone IS NULL AND email IS NOT NULL)),
-    is_primary BOOLEAN DEFAULT FALSE
+    is_primary BOOLEAN DEFAULT FALSE,
+	FOREIGN KEY healthfac_id REFERENCES health_facility(id) ON DELETE CASCADE
 );
 
 CREATE TABLE supplier (
@@ -266,6 +268,7 @@ CREATE TABLE disease_case (
     worker_id INT REFERENCES healthcareworker(id),
     patient_id INT REFERENCES citizen(citizen_id)
 );
+
 
 
 
