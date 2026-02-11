@@ -63,11 +63,12 @@ CREATE TABLE supplier (
 
 CREATE TABLE supplier_contact (
     id SERIAL PRIMARY KEY,
-   	supplier_id INT REFERENCES supplier(id) ON DELETE CASCADE,
+   	supplier_id INT,
     email VARCHAR(100),
     phone CHAR(10),
 	CHECK ((phone IS NOT NULL AND email IS NULL) OR (phone IS NULL AND email IS NOT NULL)),
-    is_primary BOOLEAN DEFAULT FALSE
+    is_primary BOOLEAN DEFAULT FALSE,
+	FOREIGN KEY supplier_id REFERENCES supplier(id) ON DELETE CASCADE
 );
 
 CREATE TABLE item (
@@ -80,10 +81,12 @@ CREATE TABLE item (
 
 CREATE TABLE listing (
     id SERIAL PRIMARY KEY,
-    supplier_id INT REFERENCES supplier(id),
-    item_id INT NOT NULL REFERENCES item(id),
+    supplier_id INT NOT NULL,
+    item_id INT NOT NULL,
     quantity INT NOT NULL,
-    price_per_item DECIMAL(10,2) NOT NULL
+    price_per_item DECIMAL(10,2) NOT NULL,
+	FOREIGN KEY supplier_id REFERENCES supplier(id) ON DELETE CASCADE,
+	FOREIGN KEY item_id REFERENCES item(id) ON DELETE CASCADE
 );
 
 
@@ -95,30 +98,35 @@ CREATE TABLE healthcareworker (
 
 CREATE TABLE skills (
     id SERIAL PRIMARY KEY,
-    worker_id INT REFERENCES healthcareworker(id),
+    worker_id INT,
     name VARCHAR(100) NOT NULL,
-    type VARCHAR(30) NOT NULL CHECK (type IN ('qualification','specialization'))
+    type VARCHAR(30) NOT NULL CHECK (type IN ('qualification','specialization')),
+	FOREIGN KEY worker_id REFERENCES healthcareworker(id) ON DELETE CASCADE
 );
 
 CREATE TABLE attendance (
-    worker_id INT REFERENCES healthcareworker(id),
+    worker_id INT,
     att_date DATE NOT NULL,
-    PRIMARY KEY (worker_id, att_date)
+    PRIMARY KEY (worker_id, att_date),
+	FOREIGN KEY worker_id REFERENCES healthcareworker(id) ON DELETE CASCADE
 );
 
 CREATE TABLE visit (
     id SERIAL PRIMARY KEY,
-    citizen_id INT REFERENCES citizen(citizen_id),
-    centre_id INT REFERENCES health_facility(id),
+    citizen_id INT,
+    centre_id INT,
     visit_date DATE NOT NULL,
-    reason TEXT
+    reason TEXT,
+	FOREIGN KEY citizen_id REFERENCES citizen(citizen_id),
+	FOREIGN KEY centre_id REFERENCES health_facility(id)
 );
 
 CREATE TABLE doctor_visit (
-    visit_id INT REFERENCES visit(id) ON DELETE CASCADE,
+    visit_id INT,
     doctor_id INT REFERENCES healthcareworker(id),
     role VARCHAR(50) NOT NULL,
-    PRIMARY KEY (visit_id, doctor_id)
+    PRIMARY KEY (visit_id, doctor_id),
+	FOREIGN KEY visit_id REFERENCES visit(id) ON DELETE CASCADE
 );
 
 CREATE TABLE diagnosis (
@@ -268,6 +276,7 @@ CREATE TABLE disease_case (
     worker_id INT REFERENCES healthcareworker(id),
     patient_id INT REFERENCES citizen(citizen_id)
 );
+
 
 
 
