@@ -222,7 +222,7 @@ CREATE TABLE wards (
 CREATE TABLE bed (
     id SERIAL PRIMARY KEY,
     status VARCHAR(20),
-    ward_id INT,
+    ward_id BIGINT UNSIGNED,
 	FOREIGN KEY (ward_id) REFERENCES wards(id)
 );
 
@@ -301,6 +301,7 @@ CREATE TABLE disease_case (
 	FOREIGN KEY (worker_id) REFERENCES healthcareworker(id),
 	FOREIGN KEY (patient_id) REFERENCES citizen(citizen_id)
 );
+
 
 
 
