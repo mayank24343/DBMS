@@ -138,14 +138,16 @@ CREATE TABLE diagnosis (
 
 CREATE TABLE prescription (
     id SERIAL PRIMARY KEY,
-    visit_id INT REFERENCES visit(id),
-    item_id INT REFERENCES item(id),
+    visit_id INT,
+    item_id INT,
     item_type VARCHAR(10) CHECK (item_type IN ('medicine','vaccine')),
     dosage VARCHAR(50),
     frequency VARCHAR(50),
     start_date DATE,
     end_date DATE,
-    instruction TEXT
+    instruction TEXT,
+	FOREIGN KEY visit_id REFERENCES visit(id),
+	FOREIGN KEY item_id REFERENCES item(id)
 );
 
 CREATE TABLE medical_procedure (
@@ -164,66 +166,83 @@ CREATE TABLE lab_test (
 
 CREATE TABLE lab_order (
     id SERIAL PRIMARY KEY,
-    visit_id INT REFERENCES visit(id),
-    test_id INT REFERENCES lab_test(id),
-    lab_id INT REFERENCES health_facility(id),
-    order_date DATE NOT NULL
+    visit_id INT,
+    test_id INT,
+    lab_id INT,
+    order_date DATE NOT NULL,
+	FOREIGN KEY visit_id REFERENCES visit(id),
+	FOREIGN KEY test_id REFERENCES lab_test(id),
+	FOREIGN KEY lab_id REFERENCES health_facility(id)
 );
 
 CREATE TABLE lab_result (
     id SERIAL PRIMARY KEY,
-    order_id INT REFERENCES lab_order(id),
+    order_id INT,
     result_date DATE,
-    result VARCHAR(50) 
+    result VARCHAR(50),
+	FOREIGN KEY order_id REFERENCES lab_order(id)
 );
 
 CREATE TABLE lab_test_provided (
-	test_id INT REFERENCES lab_test(id),
-	fac_id INT REFERENCES health_facility(id),
-	PRIMARY KEY(test_id,fac_id)
+	test_id INT,
+	fac_id INT,
+	PRIMARY KEY(test_id,fac_id),
+	FOREIGN KEY test_id REFERENCES lab_test(id),
+	FOREIGN KEY fac_id REFERENCES health_facility(id)
 );
 
 CREATE TABLE procedure_provided (
-	procedure_id INT REFERENCES medical_procedure(procedure_id),
+	procedure_id INT,
 	fac_id INT REFERENCES health_facility(id),
-	PRIMARY KEY(procedure_id,fac_id)
+	PRIMARY KEY(procedure_id,fac_id),
+	FOREIGN KEY fac_id REFERENCES health_facility(id),
+	FOREIGN KEY procedure_id REFERENCES medical_procedure(procedure_id)
 );
 
 CREATE TABLE vaccination (
     id SERIAL PRIMARY KEY,
-    citizen_id INT REFERENCES citizen(citizen_id),
-    vaccine_id INT REFERENCES item(id),
+    citizen_id INT,
+    vaccine_id INT,
     vaccination_date DATE NOT NULL,
     dose_no INT NOT NULL,
-    centre_id INT REFERENCES health_facility(id)
+    centre_id INT,
+	FOREIGN KEY citizen_id REFERENCES citizen(citizen_id),
+	FOREIGN KEY vaccine_id REFERENCES item(id),
+	FOREIGN KEY centre_id REFERENCES health_facility(id)
 );
 
 CREATE TABLE wards (
     id SERIAL PRIMARY KEY,
-    facility_id INT REFERENCES health_facility(id),
-    type VARCHAR(30) NOT NULL DEFAULT 'Normal'
+    facility_id INT,
+    type VARCHAR(30) NOT NULL DEFAULT 'Normal',
+	FOREIGN KEY facility_id REFERENCES health_facility(id)
 );
 
 CREATE TABLE bed (
     id SERIAL PRIMARY KEY,
     status VARCHAR(20),
-    ward_id INT REFERENCES wards(id)
+    ward_id INT,
+	FOREIGN KEY ward_id REFERENCES wards(id)
 );
 
 CREATE TABLE admission (
     id SERIAL PRIMARY KEY,
-    citizen_id INT REFERENCES citizen(citizen_id),
-    visit_id INT REFERENCES visit(id),
+    citizen_id INT,
+    visit_id INT,
     admission_date DATE NOT NULL,
-    discharge_date DATE
+    discharge_date DATE,
+	FOREIGN KEY citizen_id REFERENCES citizen(citizen_id),
+	FOREIGN KEY visit_id REFERENCES visit(id)
 );
 
 CREATE TABLE bed_allocs (
     id SERIAL PRIMARY KEY,
-    bed_id INT REFERENCES bed(id),
-    adm_id INT REFERENCES admission(id),
+    bed_id INT,
+    adm_id INT,
     start_time TIMESTAMP NOT NULL,
-    end_time TIMESTAMP
+    end_time TIMESTAMP,
+	FOREIGN KEY bed_id REFERENCES bed(id),
+	FOREIGN KEY adm_id REFERENCES admission(id)
 );
 
 CREATE TABLE warehouse (
@@ -235,37 +254,40 @@ CREATE TABLE warehouse (
     postal_code CHAR(6) NOT NULL,
     latitude DECIMAL(9,6) NOT NULL,
     longitude DECIMAL(9,6) NOT NULL
-
 );
 
 CREATE TABLE warehouse_inventory (
     id SERIAL PRIMARY KEY,
-    warehouse_id INT REFERENCES warehouse(id),
+    warehouse_id INT,
     item_id INT NOT NULL,
     quantity INT NOT NULL,
     expiry DATE NOT NULL,
-    threshold INT NOT NULL DEFAULT 0
+    threshold INT NOT NULL DEFAULT 0,
+	FOREIGN KEY warehouse_id REFERENCES warehouse(id)
 );
 
 CREATE TABLE facility_inventory (
     id SERIAL PRIMARY KEY,
-    facility_id INT REFERENCES health_facility(id),
+    facility_id INT,
     item_id INT NOT NULL,
     quantity INT NOT NULL,
     expiry DATE NOT NULL,
-    threshold INT NOT NULL DEFAULT 0
+    threshold INT NOT NULL DEFAULT 0,
+	FOREIGN KEY facility_id REFERENCES health_facility(id)
 );
 
 CREATE TABLE supply_order (
     id SERIAL PRIMARY KEY,
-    supplier_id INT REFERENCES supplier(id),
+    supplier_id INT,
     destination_id INT NOT NULL,
     destination_type VARCHAR(10) CHECK (destination_type IN ('warehouse','facility')),
-    item_id INT NOT NULL REFERENCES item(id),
+    item_id INT NOT NULL,
     quantity INT NOT NULL,
     order_date DATE NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'Order Placed',
-	CHECK (status IN ('Order Placed','Received','Cancelled'))
+	CHECK (status IN ('Order Placed','Received','Cancelled')),
+	FOREIGN KEY supplier_id REFERENCES supplier(id),
+	FOREIGN KEY item_id REFERENCES item(id)
 );
 
 CREATE TABLE disease_case (
@@ -273,9 +295,12 @@ CREATE TABLE disease_case (
     disease VARCHAR(100) NOT NULL,
     region VARCHAR(100) NOT NULL,
     report_date DATE NOT NULL,
-    worker_id INT REFERENCES healthcareworker(id),
-    patient_id INT REFERENCES citizen(citizen_id)
+    worker_id INT,
+    patient_id INT,
+	FOREIGN KEY worker_id REFERENCES healthcareworker(id),
+	FOREIGN KEY patient_id REFERENCES citizen(citizen_id)
 );
+
 
 
 
