@@ -253,7 +253,7 @@ CREATE TABLE vacc_prereq_dose (
 	id SERIAL PRIMARY KEY,
 	vaccine_id BIGINT UNSIGNED,
 	prereq_id BIGINT UNSIGNED,
-	number_of_times INT DEFAULT 1
+	number_of_times INT DEFAULT 1,
 	FOREIGN KEY (vaccine_id) REFERENCES item(id),
 	FOREIGN KEY (prereq_id) REFERENCES item(id)
 );	
@@ -316,7 +316,7 @@ CREATE TABLE inventory (
     quantity INT NOT NULL,
     expiry DATE NOT NULL,
     threshold INT NOT NULL DEFAULT 0,
-	FOREIGN KEY (place_id) REFERENCES place(id),	
+	FOREIGN KEY (place_id) REFERENCES place(id)
 );
 
 CREATE TABLE item_use (
@@ -350,3 +350,4 @@ CREATE TABLE inventory_transfer (
 	FOREIGN KEY (from_id) REFERENCES warehouse(id),
 	FOREIGN KEY (to_id) REFERENCES health_facility(id)
 );
+
