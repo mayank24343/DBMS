@@ -1,16 +1,37 @@
 -- gives visit past diagonsis of a patient using aadhar 
   
-select c.name, v.visit_date, hf.name as hospital, d.name as disease, diag.description from citizen c join visit v on c.citizen_id = v.citizen_id join health_facility hf on v.centre_id = hf.id left join diagnosis diag on v.id = diag.visit_id left join disease d on diag.disease_id = d.id where c.aadhar_no = "101182230365" order by v.visit_date desc;
+select c.name, v.visit_date, hf.name as hospital, d.name as disease, diag.description 
+from citizen c 
+join visit v on c.citizen_id = v.citizen_id 
+join health_facility hf on v.centre_id = hf.id 
+left join diagnosis diag on v.id = diag.visit_id 
+left join disease d on diag.disease_id = d.id 
+where c.aadhar_no = "101182230365" 
+order by v.visit_date desc;
 
 -- hospital visits within date range 
 
-select v.id as visit_id, hf.name as hospital, v.visit_date, v.reason from visit v join health_facility hf on v.centre_id = hf.id join citizen c on v.citizen_id = c.citizen_id where c.aadhar_no = "101182230365" and v.visit_date BETWEEN '2020-01-01' AND '2023-02-02';
+select v.id as visit_id, hf.name as hospital, v.visit_date, v.reason 
+from visit v 
+join health_facility hf on v.centre_id = hf.id 
+join citizen c on v.citizen_id = c.citizen_id 
+where c.aadhar_no = "101182230365" and v.visit_date BETWEEN '2020-01-01' AND '2023-02-02';
 
 -- precribed medecines during visits 
-select c.name, i.name as medicine, p.dosage, p.frequency, p.start_date, p.end_date from prescription p join visit v on p.visit_id = v.id join citizen c on v.citizen_id = c.citizen_id join item i on p.item_id = i.id where c.aadhar_no = "101182230365";
+select c.name, i.name as medicine, p.dosage, p.frequency, p.start_date, p.end_date 
+from prescription p 
+join visit v on p.visit_id = v.id 
+join citizen c on v.citizen_id = c.citizen_id 
+join item i on p.item_id = i.id 
+where c.aadhar_no = "101182230365";
 
 -- vaccination history of a citizen 
-select i.name as vaccine, v.dose_no, v.vaccination_date, hf.name as centre from vaccination v join item i on v.vaccine_id = i.id join health_facility hf on v.centre_id = hf.id join citizen c on v.citizen_id = c.citizen_id where c.aadhar_no = "101182230365" order by v.vaccination_date;
+select i.name as vaccine, v.dose_no, v.vaccination_date, hf.name as centre 
+from vaccination v 
+join item i on v.vaccine_id = i.id 
+join health_facility hf on v.centre_id = hf.id 
+join citizen c on v.citizen_id = c.citizen_id 
+where c.aadhar_no = "101182230365" order by v.vaccination_date;
 
 -- diease cases in a region 
 SELECT d.name AS disease, p.city, COUNT(*) AS total_cases
