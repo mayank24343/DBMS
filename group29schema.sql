@@ -320,7 +320,7 @@ CREATE TABLE item_use (
 	id SERIAL PRIMARY KEY,
 	item_id BIGINT UNSIGNED,
 	fac_id BIGINT UNSIGNED, 
-	use_date BIGINT UNSIGNED NOT NULL,
+	use_date DATE NOT NULL,
 	FOREIGN KEY (fac_id) REFERENCES health_facility(id),
 	FOREIGN KEY (item_id) REFERENCES item(id)
 );	
