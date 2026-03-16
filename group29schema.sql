@@ -296,6 +296,16 @@ CREATE TABLE warehouse (
     FOREIGN KEY (id) REFERENCES place(id)
 );
 
+CREATE TABLE warehouse_contact (
+    id SERIAL PRIMARY KEY,
+   	wh_id BIGINT UNSIGNED,
+    email VARCHAR(100),
+    phone CHAR(10),
+	CHECK ((phone IS NOT NULL AND email IS NULL) OR (phone IS NULL AND email IS NOT NULL)),
+    is_primary BOOLEAN DEFAULT FALSE,
+	FOREIGN KEY (wh_id) REFERENCES warehouse(id) ON DELETE CASCADE
+);
+
 CREATE TABLE inventory (
     id SERIAL PRIMARY KEY,
     place_id BIGINT UNSIGNED,
