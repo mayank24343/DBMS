@@ -261,35 +261,22 @@ CREATE TABLE vacc_prereq_dose (
 CREATE TABLE wards (
     id SERIAL PRIMARY KEY,
     facility_id BIGINT UNSIGNED,
-    type VARCHAR(30) NOT NULL DEFAULT 'Normal',
+    type VARCHAR(30) NOT NULL DEFAULT 'General',
+	occupied INT NOT NULL DEFAULT 0,
+	total INT NOT NULL DEFAULT 10,
 	FOREIGN KEY (facility_id) REFERENCES health_facility(id)
-);
-
-CREATE TABLE bed (
-    id SERIAL PRIMARY KEY,
-    status VARCHAR(20),
-    ward_id BIGINT UNSIGNED,
-	FOREIGN KEY (ward_id) REFERENCES wards(id)
 );
 
 CREATE TABLE admission (
     id SERIAL PRIMARY KEY,
     citizen_id BIGINT UNSIGNED,
     visit_id BIGINT UNSIGNED,
+	ward_id BIGINT UNSIGNED,
     admission_date DATE NOT NULL,
     discharge_date DATE,
 	FOREIGN KEY (citizen_id) REFERENCES citizen(citizen_id),
-	FOREIGN KEY (visit_id) REFERENCES visit(id)
-);
-
-CREATE TABLE bed_allocs (
-    id SERIAL PRIMARY KEY,
-    bed_id BIGINT UNSIGNED,
-    adm_id BIGINT UNSIGNED,
-    start_time TIMESTAMP NOT NULL,
-    end_time TIMESTAMP,
-	FOREIGN KEY (bed_id) REFERENCES bed(id),
-	FOREIGN KEY (adm_id) REFERENCES admission(id)
+	FOREIGN KEY (visit_id) REFERENCES visit(id),
+	FOREIGN KEY (ward_id) REFERENCES wards(id)
 );
 
 CREATE TABLE transfers (
