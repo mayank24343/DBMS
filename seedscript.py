@@ -647,15 +647,16 @@ for i in range(1,1001):
             f.write(f"INSERT INTO diagnosis VALUES(default, {vid}, {6}, '{diseases[5][0]}');\n")
             for p in [1,3,4]:
                 f.write(f"INSERT INTO prescription VALUES(default, {vid}, {p},'medicine','1 tablet','2/day','{date.date()}','{(date + timedelta(days=random.randint(10,12))).date()}','After food');\n")
-                mid = date + timedelta(days = 5)
-                f.write(f"INSERT INTO admission VALUES(default, {index}, {vid}, {gen[centre]}, '{date.date()}', '{mid.date()}');\n")
-                new = 0
-                while True:
-                    new = random.choice(vacc_places)
-                    if new != centre:
-                        break
+            mid = date + timedelta(days = 5)
+            f.write(f"INSERT INTO admission VALUES(default, {index}, {vid}, {gen[centre]}, '{date.date()}', '{mid.date()}');\n")
+            new = 0
+            while True:
+                new = random.choice(vacc_places)
+                if new != centre:
+                    break
                         
             f.write(f"INSERT INTO admission VALUES(default, {index}, {vid}, {gen[new]}, '{mid.date()}', '{(mid +  timedelta(days=random.randint(5,6))).date()}');\n")
+            f.write(f"INSERT INTO transfer VALUES(default, {centre},{new},{index},{mid.date()},'Personal reasons')")
             f.write(f"INSERT INTO procedure_taken VALUES(default, {vid}, 9);\n")
 
         # covid, dengue, malaria
