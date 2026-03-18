@@ -650,9 +650,12 @@ for i in range(1,1001):
                 new = random.choice(vacc_places)
                 if new != centre:
                     break
-                        
+
+            
             f.write(f"INSERT INTO admission VALUES(default, {index}, {vid}, {gen[new]}, '{mid.date()}', '{(mid +  timedelta(days=random.randint(5,6))).date()}');\n")
-            f.write(f"INSERT INTO transfers VALUES(default, {centre},{new},{index},{mid.date()},'Personal reasons');\n")
+            print("yass")
+            f.write(f"INSERT INTO transfers VALUES(default, {vid}, {centre},{new},{index},'{mid.date()}','Personal reasons');\n")
+            print("added")
             f.write(f"INSERT INTO procedure_taken VALUES(default, {vid}, 9);\n")
 
         # covid, dengue, malaria
@@ -683,7 +686,7 @@ for i in range(1,1001):
                 f"INSERT INTO prescription VALUES(default,{vid},{m},'medicine','1 tablet','2/day','{date.date()}','{(date + timedelta(days=5)).date()}','After food');\n"
                 )
 
-            if random.randint(1,10) > 6 and flag1 and flag2:
+            if random.randint(1,10) > 6 and flag1 and flag2 and flag3:
                 f.write(
                     f"INSERT INTO admission VALUES(default,{index},{vid},{gen[centre]},'{date.date()}',NULL);\n"
                 )
