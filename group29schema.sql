@@ -1,5 +1,5 @@
 CREATE TABLE users(
-	userid SERIAL PRIMARY KEY,
+	id SERIAL PRIMARY KEY,
 	password VARCHAR(50),
 	role VARCHAR(20)
 );
