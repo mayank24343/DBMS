@@ -281,7 +281,7 @@ CREATE TABLE admission (
 
 CREATE TABLE transfers (
 	id SERIAL PRIMARY KEY,
-	visit_id BIGINT UNSIGNED
+	visit_id BIGINT UNSIGNED,
 	from_fac BIGINT UNSIGNED,
 	to_fac BIGINT UNSIGNED,
 	citizen_id BIGINT UNSIGNED,
