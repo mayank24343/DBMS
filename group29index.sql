@@ -1,119 +1,76 @@
-CREATE INDEX idx_citizen_aadhar
-ON citizen(aadhar_no);
+-- Speed up patient-specific history lookups
+CREATE INDEX idx_visit_citizen_date ON visit(citizen_id, visit_date DESC);
 
-CREATE UNIQUE INDEX idx_primary_citizen_contact
-ON citizen_contact(citizen_id) WHERE is_primary = TRUE;
+-- Speed up regional disease analytics
+CREATE INDEX idx_citizen_location ON citizen(state, city);
 
-CREATE INDEX idx_healthfac_type
-ON health_facility(type);
+-- Speed up disease-specific reporting
+CREATE INDEX idx_diagnosis_disease ON diagnosis(disease_id);
 
-CREATE INDEX idx_healthfac_city
-ON health_facility(city);
+-- Speed up vaccination history lookups
+CREATE INDEX idx_vaccination_citizen ON vaccination(citizen_id);
 
-CREATE INDEX idx_healthfac_lat_long
-ON health_facility(latitude, longitude);
+-- Speed up expiry alerts
+CREATE INDEX idx_inventory_expiry ON inventory(expiry);
 
-CREATE UNIQUE INDEX idx_primary_healthfac_contact
-ON healthfac_contact(healthfac_id) WHERE is_primary = TRUE;
+-- Speed up stock level checks for specific facilities
+CREATE INDEX idx_inventory_place_item ON inventory(place_id, item_id);
 
-CREATE INDEX idx_supplier_city
-ON supplier(city);
+-- Speed up price comparisons for procurement
+CREATE INDEX idx_listing_item_price ON listing(item_id, price_per_item);
 
-CREATE INDEX idx_listing_item
-ON listing(item_id);
+-- Speed up worker searches by facility
+CREATE INDEX idx_works_fac_status ON works(fac_id, end_date);
 
-CREATE INDEX idx_listing_supplier
-ON listing(supplier_id);
+-- Speed up skill/qualification filtering
+CREATE INDEX idx_skills_name ON skills(name);
 
-CREATE INDEX idx_listing_item_supplier
-ON listing(item_id, supplier_id);
+--medical history view
+CREATE VIEW view_complete_clinical_record AS
+SELECT 
+    v.citizen_id, v.id AS visit_id, v.visit_date, hf.name AS facility,
+    d.name AS diagnosis, i.name AS medication, pr.dosage,
+    lt.name AS test_name, lr.result AS test_result,
+    mp.name AS procedure_performed,
+    a.admission_date, a.discharge_date, w.type AS ward_type
+FROM visit v
+LEFT JOIN health_facility hf ON v.centre_id = hf.id
+LEFT JOIN diagnosis diag ON v.id = diag.visit_id
+LEFT JOIN disease d ON diag.disease_id = d.id
+LEFT JOIN prescription pr ON v.id = pr.visit_id
+LEFT JOIN item i ON pr.item_id = i.id
+LEFT JOIN lab_order lo ON lo.visit_id = v.id
+LEFT JOIN lab_result lr ON lr.order_id = lo.id
+LEFT JOIN lab_test lt ON lt.id = lo.test_id
+LEFT JOIN procedure_taken pt ON v.id = pt.visit_id
+LEFT JOIN medical_procedure mp ON pt.procedure_id = mp.procedure_id
+LEFT JOIN admission a ON a.visit_id = v.id
+LEFT JOIN wards w ON a.ward_id = w.id;
 
-CREATE INDEX idx_worker_role
-ON healthcareworker(role);
+--supply level view
+CREATE VIEW view_inventory_alerts AS
+SELECT 
+    p.state, p.city, hf.name AS facility_name, i.name AS item_name,
+    inv.quantity, inv.threshold, inv.expiry,
+    CASE 
+        WHEN inv.quantity < inv.threshold THEN 'Low Stock'
+        WHEN inv.expiry <= CURDATE() THEN 'Expired'
+        WHEN inv.expiry <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'Expiring Soon'
+        ELSE 'Healthy'
+    END AS status_flag
+FROM inventory inv
+JOIN item i ON inv.item_id = i.id
+JOIN health_facility hf ON inv.place_id = hf.id
+JOIN place p ON hf.id = p.id;
 
-CREATE INDEX idx_skill_lookup
-ON skills(name, type);
-
-CREATE INDEX idx_visit_citizen_date
-ON visit(citizen_id, visit_date DESC);
-
-CREATE INDEX idx_visit_centre
-ON visit(centre_id);
-
-CREATE INDEX idx_doctor_visit_doctor
-ON doctor_visit(doctor_id);
-
-CREATE INDEX idx_diagnosis_visit
-ON diagnosis(visit_id);
-
-CREATE INDEX idx_prescription_visit
-ON prescription(visit_id);
-
-CREATE INDEX idx_prescription_item
-ON prescription(item_id);
-
-CREATE INDEX idx_vaccination_citizen
-ON vaccination(citizen_id, vaccination_date DESC);
-
-CREATE UNIQUE INDEX idx_unique_vaccine_dose
-ON vaccination(citizen_id, vaccine_id, dose_no);
-
-CREATE INDEX idx_lab_test_provided_test
-ON lab_test_provided(test_id);
-
-CREATE INDEX idx_lab_test_provided_fac
-ON lab_test_provided(fac_id);
-
-CREATE INDEX idx_procedure_provided_proc
-ON procedure_provided(procedure_id);
-
-CREATE INDEX idx_procedure_provided_fac
-ON procedure_provided(fac_id);
-
-CREATE INDEX idx_lab_order_visit
-ON lab_order(visit_id);
-
-CREATE INDEX idx_lab_order_lab
-ON lab_order(lab_id);
-
-CREATE INDEX idx_wards_facility
-ON wards(facility_id);
-
-CREATE INDEX idx_bed_ward
-ON bed(ward_id);
-
-CREATE INDEX idx_admission_citizen
-ON admission(citizen_id);
-
-CREATE INDEX idx_warehouse_inventory_item
-ON warehouse_inventory(item_id, warehouse_id);
-
-CREATE INDEX idx_facility_inventory_item
-ON facility_inventory(item_id, facility_id);
-
-CREATE INDEX idx_facility_inventory_threshold
-ON facility_inventory(quantity, threshold)
-WHERE quantity < threshold;
-
-CREATE INDEX idx_inventory_expiry
-ON facility_inventory(expiry);
-
-CREATE INDEX idx_warehouse_inventory_expiry
-ON warehouse_inventory(expiry);
-
-CREATE INDEX idx_supply_order_supplier
-ON supply_order(supplier_id);
-
-CREATE INDEX idx_supply_order_item
-ON supply_order(item_id);
-
-CREATE INDEX idx_supply_order_status
-ON supply_order(status);
-
-CREATE INDEX idx_disease_case_disease_date
-ON disease_case(disease, report_date);
-
-CREATE INDEX idx_disease_case_region_date
-ON disease_case(region, report_date);
-
-
+--vacancy check
+CREATE VIEW view_facility_bed_capacity AS
+SELECT 
+    p.state, p.city, hf.name, hf.type,
+    SUM(w.total) AS total_beds,
+    SUM(w.occupied) AS occupied_beds,
+    SUM(w.total) - SUM(w.occupied) AS available_beds
+FROM wards w
+JOIN health_facility hf ON w.facility_id = hf.id
+JOIN place p ON hf.id = p.id
+GROUP BY hf.id, p.state, p.city;
