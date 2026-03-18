@@ -21,6 +21,68 @@ from .serializers import (
 # WRITE DATA (POST REQUESTS)
 # ==========================================
 
+@api_view(['GET'])
+def search_directory(request):
+    search_type = request.GET.get('type', 'lab') # 'lab', 'pharmacy', or 'procedure'
+    query = request.GET.get('query', '').strip()
+
+    try:
+        # --- THE REAL ORM LOGIC ---
+        # If your models are named perfectly, this is how you filter them:
+        #
+        # if search_type == 'lab':
+        #     facilities = HealthFacility.objects.filter(tests_offered__name__icontains=query)
+        # elif search_type == 'pharmacy':
+        #     facilities = HealthFacility.objects.filter(inventory__medicine__name__icontains=query)
+        # elif search_type == 'procedure':
+        #     facilities = HealthFacility.objects.filter(procedures_offered__name__icontains=query)
+        # 
+        # data = [{"id": f.id, "name": f.name, "type": f.type, "address": f.address} for f in facilities]
+        # return Response(data)
+
+        # --- FALLBACK MOCK DATA FOR UI TESTING ---
+        # Until the exact model relations are un-commented above, we will return this so React works instantly:
+        mock_results = [
+            {"id": 1, "name": "Central General Hospital", "type": "Hospital", "address": "123 Main St, Region A", "contact": "011-23456789", "distance": "2.4 km"},
+            {"id": 2, "name": "City Care Clinic", "type": "Clinic", "address": "45 South Extension, Region B", "contact": "011-98765432", "distance": "5.1 km"},
+            {"id": 142, "name": "National Research Lab", "type": "Laboratory", "address": "Knowledge Park, Region C", "contact": "011-11122233", "distance": "8.0 km"}
+        ]
+        
+        # Simulate a search filter
+        if query:
+            if search_type == 'lab':
+                mock_results = [mock_results[2]] # Only return the lab
+            elif search_type == 'pharmacy':
+                mock_results = [mock_results[0], mock_results[1]] # Return hospitals/clinics
+                
+        return Response(mock_results)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+
+@api_view(['POST'])
+def book_appointment(request):
+    data = request.data
+    try:
+        # 1. Verify the citizen
+        citizen = Citizen.objects.get(aadhar_no=data['aadhar_no'])
+        
+        # 2. Create the future Visit record
+        # We prepend "APPOINTMENT:" to the reason so doctors know it's scheduled
+        visit = Visit.objects.create(
+            citizen=citizen,
+            centre_id=data['facility_id'],
+            visit_date=data['appointment_date'],
+            reason=f"APPOINTMENT: {data['reason']}"
+        )
+        
+        return Response({"message": "Appointment booked successfully!", "visit_id": visit.id}, status=201)
+        
+    except Citizen.DoesNotExist:
+        return Response({"error": "Citizen not found."}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+
 @api_view(['POST'])
 def create_visit_with_diagnosis(request):
     data = request.data
@@ -72,21 +134,22 @@ class CitizenMedicalHistoryAPIView(generics.ListAPIView):
             .order_by('-visit_date')
 
 class VisitDetailAPIView(generics.RetrieveAPIView):
+    """Retrieves complete details for one specific visit ID."""
     queryset = Visit.objects.all()
     serializer_class = VisitFullDetailSerializer
-    lookup_field = 'id'
+    lookup_field = 'id' 
 
     def get_queryset(self):
         return super().get_queryset().select_related(
-            'centre',
-            'citizen'
+            'centre'
         ).prefetch_related(
             'diagnoses__disease',
             'prescriptions__item',
             'lab_orders__test',
-            'lab_orders__results',        # ✅ FIXED
-            'admission_set__ward__facility'  # ⚠️ works, see note below
+            'lab_orders__result_data',
+            'admission_set__ward__facility'
         )
+
 # ==========================================
 # ANALYTICS & DASHBOARD (GET REQUESTS)
 # ==========================================
