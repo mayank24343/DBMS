@@ -29,7 +29,7 @@ CREATE TABLE citizen (
     postal_code CHAR(6) NOT NULL,
     latitude DECIMAL(9,6) NOT NULL,
     longitude DECIMAL(9,6) NOT NULL,
-	FOREIGN KEY (citizen_id) references users(userid)
+	FOREIGN KEY (citizen_id) references users(id)
 );
 
 CREATE TABLE citizen_contact (
@@ -70,7 +70,7 @@ CREATE TABLE supplier (
     postal_code CHAR(6) NOT NULL,
     latitude DECIMAL(9,6) NOT NULL,
     longitude DECIMAL(9,6) NOT NULL,
-	FOREIGN KEY (id) references users(userid)
+	FOREIGN KEY (id) references users(id)
 );
 
 CREATE TABLE supplier_contact (
@@ -105,7 +105,7 @@ CREATE TABLE healthcareworker (
     id BIGINT UNSIGNED,
     name VARCHAR(100) NOT NULL,
     role VARCHAR(50) NOT NULL,
-	FOREIGN KEY (id) references users(userid)
+	FOREIGN KEY (id) references users(id)
 );
 
 CREATE TABLE works (
