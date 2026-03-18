@@ -25,7 +25,7 @@ CREATE INDEX idx_works_fac_status ON works(fac_id, end_date);
 -- Speed up skill/qualification filtering
 CREATE INDEX idx_skills_name ON skills(name);
 
---medical history view
+-- medical history view
 CREATE VIEW view_complete_clinical_record AS
 SELECT 
     v.citizen_id, v.id AS visit_id, v.visit_date, hf.name AS facility,
@@ -47,7 +47,7 @@ LEFT JOIN medical_procedure mp ON pt.procedure_id = mp.procedure_id
 LEFT JOIN admission a ON a.visit_id = v.id
 LEFT JOIN wards w ON a.ward_id = w.id;
 
---supply level view
+-- supply level view
 CREATE VIEW view_inventory_alerts AS
 SELECT 
     p.state, p.city, hf.name AS facility_name, i.name AS item_name,
@@ -63,7 +63,7 @@ JOIN item i ON inv.item_id = i.id
 JOIN health_facility hf ON inv.place_id = hf.id
 JOIN place p ON hf.id = p.id;
 
---vacancy check
+-- vacancy check
 CREATE VIEW view_facility_bed_capacity AS
 SELECT 
     p.state, p.city, hf.name, hf.type,
