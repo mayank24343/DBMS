@@ -72,22 +72,21 @@ class CitizenMedicalHistoryAPIView(generics.ListAPIView):
             .order_by('-visit_date')
 
 class VisitDetailAPIView(generics.RetrieveAPIView):
-    """Retrieves complete details for one specific visit ID."""
     queryset = Visit.objects.all()
     serializer_class = VisitFullDetailSerializer
-    lookup_field = 'id' 
+    lookup_field = 'id'
 
     def get_queryset(self):
         return super().get_queryset().select_related(
-            'centre'
+            'centre',
+            'citizen'
         ).prefetch_related(
             'diagnoses__disease',
             'prescriptions__item',
             'lab_orders__test',
-            'lab_orders__result_data',
-            'admission_set__ward__facility'
+            'lab_orders__results',        # ✅ FIXED
+            'admission_set__ward__facility'  # ⚠️ works, see note below
         )
-
 # ==========================================
 # ANALYTICS & DASHBOARD (GET REQUESTS)
 # ==========================================
