@@ -33,14 +33,14 @@ JOIN health_facility hf ON v.centre_id = hf.id
 WHERE v.citizen_id = 1500
 ORDER BY v.vaccination_date DESC;
 
---4 hospital visits in a date range
+-- 4 hospital visits in a date range
 SELECT v.visit_date, hf.name, v.reason
 FROM visit v
 JOIN health_facility hf ON v.centre_id = hf.id
 WHERE v.citizen_id = 1120
 AND v.visit_date BETWEEN '2023-01-01' AND '2026-12-31';
 
---5 vaccine citizen is eleigible for but hasnt taken 
+-- 5 vaccine citizen is eleigible for but hasnt taken 
 SELECT i.name 
 FROM item i
 JOIN vacc_prereq_age vpa ON i.id = vpa.vaccine_id
@@ -64,13 +64,13 @@ JOIN place p ON inv.place_id = p.id
 WHERE inv.place_id = 1
   AND inv.expiry <= DATE_ADD(CURDATE(), INTERVAL 30 DAY);
 
---8 items below inventory threshold 
+-- 8 items below inventory threshold 
 SELECT i.name, inv.quantity, inv.threshold
 FROM inventory inv
 JOIN item i ON inv.item_id = i.id
 WHERE inv.place_id = 1 AND inv.quantity < inv.threshold;
 
---9 workers in fac w qualification
+-- 9 workers in fac w qualification
 SELECT hw.name, hw.role, s.name AS qualification
 FROM healthcareworker hw
 JOIN works w ON hw.id = w.worker_id
@@ -79,17 +79,17 @@ WHERE w.fac_id = 1
   AND w.end_date IS NULL
   AND s.name = 'MBBS'; 
 
---10 facilities offering a lab test 
+-- 10 facilities offering a lab test 
 SELECT hf.name FROM health_facility hf
 JOIN lab_test_provided ltp ON hf.id = ltp.fac_id
 WHERE ltp.test_id = 12;
 
---11 facilities offering a procedure
+-- 11 facilities offering a procedure
 SELECT hf.name FROM health_facility hf
 JOIN procedure_provided pp ON hf.id = pp.fac_id
 WHERE pp.procedure_id = 10;
 
---12 facilities w vacant beds by location
+-- 12 facilities w vacant beds by location
 SELECT p.state, p.city, hf.name, SUM(w.total) - SUM(w.occupied) AS vacant_beds, SUM(w.total) as total_beds
 FROM wards w
 JOIN health_facility hf ON w.facility_id = hf.id
@@ -98,7 +98,7 @@ WHERE p.state = 'Delhi'
 GROUP BY w.facility_id
 HAVING SUM(w.total) - SUM(w.occupied) > 0;
 
---13 individuals effected by a disease in a region 
+-- 13 individuals effected by a disease in a region 
 SELECT c.state, c.city, COUNT(DISTINCT c.citizen_id) as cases
 FROM diagnosis d
 JOIN visit v ON d.visit_id = v.id
@@ -106,13 +106,13 @@ JOIN citizen c ON v.citizen_id = c.citizen_id
 WHERE d.disease_id = 16
 GROUP BY c.state, c.city;
 
---14 total cases of a given disease on a given day
+-- 14 total cases of a given disease on a given day
 SELECT COUNT(*) 
 FROM diagnosis d 
 JOIN visit v ON d.visit_id = v.id 
 WHERE d.disease_id = 6 AND v.visit_date = '2026-03-18';
 
---15 monthly average of a disease
+-- 15 monthly average of a disease
 SELECT MONTH(v.visit_date) as month, COUNT(*) / COUNT(DISTINCT v.visit_date) as avg_daily_cases
 FROM diagnosis d
 JOIN visit v ON d.visit_id = v.id
