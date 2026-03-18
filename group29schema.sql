@@ -281,6 +281,7 @@ CREATE TABLE admission (
 
 CREATE TABLE transfers (
 	id SERIAL PRIMARY KEY,
+	visit_id BIGINT UNSIGNED
 	from_fac BIGINT UNSIGNED,
 	to_fac BIGINT UNSIGNED,
 	citizen_id BIGINT UNSIGNED,
@@ -288,7 +289,8 @@ CREATE TABLE transfers (
 	reason TEXT,
 	FOREIGN KEY (from_fac) REFERENCES health_facility(id),
 	FOREIGN KEY (to_fac) REFERENCES health_facility(id),
-	FOREIGN KEY (citizen_id) REFERENCES citizen(citizen_id)
+	FOREIGN KEY (citizen_id) REFERENCES citizen(citizen_id),
+	FOREIGN KEY (visit_id) REFERENCES visit(id)
 );	
 
 CREATE TABLE warehouse (
