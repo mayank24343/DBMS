@@ -253,7 +253,6 @@ CREATE TABLE vacc_prereq_dose (
 	id SERIAL PRIMARY KEY,
 	vaccine_id BIGINT UNSIGNED,
 	prereq_id BIGINT UNSIGNED,
-	number_of_times INT DEFAULT 1,
 	FOREIGN KEY (vaccine_id) REFERENCES item(id),
 	FOREIGN KEY (prereq_id) REFERENCES item(id)
 );	
