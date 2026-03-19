@@ -12,6 +12,7 @@ const MedicalHistory = ({ aadharNo }) => {
             .then(data => {
                 setHistory(data);
                 setLoading(false);
+                console.log("Fetched history:", data);
             })
             .catch(err => {
                 console.error("Failed to fetch history:", err);

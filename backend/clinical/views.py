@@ -21,41 +21,56 @@ from .serializers import (
 # WRITE DATA (POST REQUESTS)
 # ==========================================
 
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from facilities.models import HealthFacility
+from clinical.models import LabTestProvided, ProcedureProvided
+from inventory.models import Inventory
+
 @api_view(['GET'])
 def search_directory(request):
-    search_type = request.GET.get('type', 'lab') # 'lab', 'pharmacy', or 'procedure'
+    search_type = request.GET.get('type', 'lab')
     query = request.GET.get('query', '').strip()
 
     try:
-        # --- THE REAL ORM LOGIC ---
-        # If your models are named perfectly, this is how you filter them:
-        #
-        # if search_type == 'lab':
-        #     facilities = HealthFacility.objects.filter(tests_offered__name__icontains=query)
-        # elif search_type == 'pharmacy':
-        #     facilities = HealthFacility.objects.filter(inventory__medicine__name__icontains=query)
-        # elif search_type == 'procedure':
-        #     facilities = HealthFacility.objects.filter(procedures_offered__name__icontains=query)
-        # 
-        # data = [{"id": f.id, "name": f.name, "type": f.type, "address": f.address} for f in facilities]
-        # return Response(data)
+        facilities = HealthFacility.objects.all()
 
-        # --- FALLBACK MOCK DATA FOR UI TESTING ---
-        # Until the exact model relations are un-commented above, we will return this so React works instantly:
-        mock_results = [
-            {"id": 1, "name": "Central General Hospital", "type": "Hospital", "address": "123 Main St, Region A", "contact": "011-23456789", "distance": "2.4 km"},
-            {"id": 2, "name": "City Care Clinic", "type": "Clinic", "address": "45 South Extension, Region B", "contact": "011-98765432", "distance": "5.1 km"},
-            {"id": 142, "name": "National Research Lab", "type": "Laboratory", "address": "Knowledge Park, Region C", "contact": "011-11122233", "distance": "8.0 km"}
-        ]
-        
-        # Simulate a search filter
-        if query:
-            if search_type == 'lab':
-                mock_results = [mock_results[2]] # Only return the lab
-            elif search_type == 'pharmacy':
-                mock_results = [mock_results[0], mock_results[1]] # Return hospitals/clinics
-                
-        return Response(mock_results)
+        # 🔬 LAB SEARCH
+        if search_type == 'lab':
+            facilities = facilities.filter(
+                labtestprovided__test__name__icontains=query
+            )
+
+        # 💊 PHARMACY SEARCH
+        elif search_type == 'pharmacy':
+            facilities = facilities.filter(
+                place__inventory__item__name__icontains=query,
+                place__inventory__item__type='medicine'
+            )
+
+        # 🏥 PROCEDURE SEARCH
+        elif search_type == 'procedure':
+            facilities = facilities.filter(
+                procedureprovided__procedure__name__icontains=query
+            )
+
+        facilities = facilities.distinct()
+
+        # 🔥 SERIALIZE MANUALLY
+        data = []
+        for f in facilities:
+            place = f.place
+
+            data.append({
+                "id": f.place_id,
+                "name": f.name,
+                "type": f.type,
+                "address": f"{place.addr_l1}, {place.city}, {place.state}",
+                "latitude": float(place.latitude),
+                "longitude": float(place.longitude),
+            })
+
+        return Response(data)
 
     except Exception as e:
         return Response({"error": str(e)}, status=400)
@@ -112,6 +127,25 @@ def create_visit_with_diagnosis(request):
         return Response({"error": "Citizen not found. Check Aadhar number."}, status=404)
     except Exception as e:
         return Response({"error": str(e)}, status=400)
+    
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from facilities.models import HealthFacility
+
+@api_view(['GET'])
+def get_facilities(request):
+    facilities = HealthFacility.objects.select_related('place').all()
+
+    data = []
+    for f in facilities:
+        data.append({
+            "id": f.place_id,
+            "name": f.name,
+            "type": f.type,
+            "city": f.place.city
+        })
+
+    return Response(data)
 
 
 # ==========================================
@@ -146,7 +180,7 @@ class VisitDetailAPIView(generics.RetrieveAPIView):
             'diagnoses__disease',
             'prescriptions__item',
             'lab_orders__test',
-            'lab_orders__result_data',
+            'lab_orders__results',        # ✅ FIXED
             'admission_set__ward__facility'
         )
 
