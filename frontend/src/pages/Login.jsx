@@ -29,33 +29,32 @@ const Login = ({ onLogin }) => {
                 })
             });
             console.log(JSON.stringify({
-                    identifier,
-                    password,
-                    role
-                }));
+                identifier,
+                password,
+                role
+            }));
             const data = await res.json();
 
-            if (!res.ok) {
-                throw new Error(data.error || "Login failed");
+            if (!res.ok) throw new Error(data.error);
+
+            // 🔥 STORE BASED ON ROLE
+            if (data.role === "citizen") {
+                localStorage.setItem("citizen_id", data.citizen_id);
+                navigate("/dashboard");
             }
 
-            // 🔥 IMPORTANT: ALWAYS STORE citizen_id
-            const citizenId = data.citizen_id;
+            else if (data.role === "worker") {
+                localStorage.setItem("worker_id", data.worker_id);
+                navigate(`/facility/${data.worker_id}`);
+            }
 
-            localStorage.setItem("citizen_id", citizenId);
+            else if (data.role === "supplier") {
+                localStorage.setItem("supplier_id", data.supplier_id);
+                navigate(`/supplier/dashboard`);
+            }
 
-            onLogin({
-                role,
-                citizen_id: citizenId
-            });
-
-            // 🔥 ROUTING BASED ON ROLE
-            if (role === 'citizen') {
-                navigate(`/citizen/dashboard`);
-            } else if (role === 'worker') {
-                navigate(`/facility/${data.facility_id}`);
-            } else if (role === 'admin') {
-                navigate('/admin');
+            else if (data.role === "admin") {
+                navigate("/admin");
             }
 
         } catch (err) {
@@ -149,11 +148,10 @@ const Login = ({ onLogin }) => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className={`w-full py-3 rounded-xl font-bold text-white ${
-                            loading
+                        className={`w-full py-3 rounded-xl font-bold text-white ${loading
                                 ? "bg-blue-400"
                                 : "bg-blue-600 hover:bg-blue-700"
-                        }`}
+                            }`}
                     >
                         {loading ? "Logging in..." : "Secure Login"}
                     </button>
