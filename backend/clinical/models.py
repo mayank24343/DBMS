@@ -1,48 +1,8 @@
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
-
-class Citizen(models.Model):
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        primary_key=True,
-        db_column='citizen_id'
-    )
-
-    aadhar_no = models.CharField(max_length=12, unique=True)
-    dob = models.DateField()
-    sex = models.CharField(max_length=1)
-
-    addr_l1 = models.TextField()
-    addr_l2 = models.TextField(blank=True, null=True)
-    city = models.CharField(max_length=50)
-    state = models.CharField(max_length=50)
-    postal_code = models.CharField(max_length=6)
-    latitude = models.DecimalField(max_digits=9, decimal_places=6)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6)
-
-    class Meta:
-        db_table = 'citizen'
-        managed = False
-
-class CitizenContact(models.Model):
-    id = models.BigAutoField(primary_key=True)
-
-    citizen = models.ForeignKey(
-        Citizen,
-        on_delete=models.CASCADE,
-        db_column='citizen_id',
-        related_name='contacts'
-    )
-
-    email = models.EmailField(blank=True, null=True)
-    phone = models.CharField(max_length=10, blank=True, null=True)
-    is_primary = models.BooleanField(default=False)
-
-    class Meta:
-        db_table = 'citizen_contact'
-        managed = False
+from accounts.models import Citizen
+from inventory.models import Item
 
 # ------------------------------------------------------------------------
 # MEDICAL REFERENCE TABLES (Diseases, Procedures, Tests)
@@ -180,11 +140,13 @@ class LabOrder(models.Model):
         managed = False
 
 class LabResult(models.Model):
+    id = models.BigAutoField(primary_key=True)
+
     order = models.ForeignKey(
         LabOrder,
         on_delete=models.CASCADE,
         db_column='order_id',
-        related_name='results'   # 🔥 ADD THIS
+        related_name='results'
     )
 
     result_date = models.DateField(blank=True, null=True)
@@ -259,13 +221,23 @@ class Transfer(models.Model):
         managed = False
 
 class Prescription(models.Model):
-    visit = models.ForeignKey(Visit, on_delete=models.CASCADE, related_name='prescriptions')
-    item = models.ForeignKey('inventory.Item', on_delete=models.CASCADE)
-    
-    # We replicate your constraint natively with choices
-    ITEM_TYPES = (('medicine', 'Medicine'), ('vaccine', 'Vaccine'))
-    item_type = models.CharField(max_length=10, choices=ITEM_TYPES)
-    
+    id = models.BigAutoField(primary_key=True)
+
+    visit = models.ForeignKey(
+        Visit,
+        on_delete=models.CASCADE,
+        db_column='visit_id',
+        related_name='prescriptions'
+    )
+
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        db_column='item_id'
+    )
+
+    item_type = models.CharField(max_length=10)
+
     dosage = models.CharField(max_length=50, blank=True, null=True)
     frequency = models.CharField(max_length=50, blank=True, null=True)
     start_date = models.DateField(blank=True, null=True)
@@ -274,6 +246,7 @@ class Prescription(models.Model):
 
     class Meta:
         db_table = 'prescription'
+        managed = False
 
 class Vaccination(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -304,6 +277,8 @@ class Vaccination(models.Model):
         managed = False
 
 class DoctorVisit(models.Model):
+    id = models.BigAutoField(primary_key=True)
+
     visit = models.ForeignKey(
         Visit,
         on_delete=models.CASCADE,
@@ -321,9 +296,10 @@ class DoctorVisit(models.Model):
     class Meta:
         db_table = 'doctor_visit'
         managed = False
-        unique_together = (('visit', 'doctor'),)
 
 class LabTestProvided(models.Model):
+    id = models.BigAutoField(primary_key=True)
+
     test = models.ForeignKey(
         LabTest,
         on_delete=models.CASCADE,
@@ -339,9 +315,10 @@ class LabTestProvided(models.Model):
     class Meta:
         db_table = 'lab_test_provided'
         managed = False
-        unique_together = (('test', 'fac'),)
 
 class ProcedureProvided(models.Model):
+    id = models.BigAutoField(primary_key=True)
+
     procedure = models.ForeignKey(
         MedicalProcedure,
         on_delete=models.CASCADE,
@@ -357,4 +334,46 @@ class ProcedureProvided(models.Model):
     class Meta:
         db_table = 'procedure_provided'
         managed = False
-        unique_together = (('procedure', 'fac'),)
+
+    # ------------------------------------------------------------------------
+# VACCINE RULES
+# ------------------------------------------------------------------------
+
+class VaccPrereqAge(models.Model):
+    id = models.BigAutoField(primary_key=True)
+
+    vaccine = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        db_column='vaccine_id',
+        related_name='vaccprereqage'
+    )
+
+    age_limit = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = 'vacc_prereq_age'
+        managed = False
+
+class VaccPrereqDose(models.Model):
+    id = models.BigAutoField(primary_key=True)
+
+    vaccine = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        db_column='vaccine_id',
+        related_name='dose_rules'
+    )
+
+    prereq = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        db_column='prereq_id',
+        related_name='prereq_for'
+    )
+
+    number_of_times = models.IntegerField(default=1)
+
+    class Meta:
+        db_table = 'vacc_prereq_dose'
+        managed = False
