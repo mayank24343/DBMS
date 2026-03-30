@@ -322,6 +322,7 @@ CREATE TABLE item_use (
 	item_id BIGINT UNSIGNED,
 	fac_id BIGINT UNSIGNED, 
 	use_date DATE NOT NULL,
+	quantity INT NOT NULL,
 	FOREIGN KEY (fac_id) REFERENCES health_facility(id),
 	FOREIGN KEY (item_id) REFERENCES item(id)
 );	
