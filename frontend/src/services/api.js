@@ -5,7 +5,18 @@ const API_BASE_URL = 'http://127.0.0.1:8000/api';
 export const getMedicalHistory = async (aadharNo) => {
     try {
         // This hits the endpoint we just tested! [cite: 40]
-        const response = await axios.get(`${API_BASE_URL}/history/${aadharNo}/`);
+        const response = await axios.get(`${API_BASE_URL}/vaccines/history/${aadharNo}/`);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching history:", error);
+        throw error;
+    }
+};
+
+export const getVaccinationHistory = async (citizenId) => {
+    try {
+        // This hits the endpoint we just tested! [cite: 40]
+        const response = await axios.get(`${API_BASE_URL}/vaccination/${citizenId}/`);
         return response.data;
     } catch (error) {
         console.error("Error fetching history:", error);

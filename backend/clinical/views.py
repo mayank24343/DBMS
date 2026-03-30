@@ -9,7 +9,7 @@ from django.db.models import Count, Avg, F
 from django.db.models.functions import ExtractMonth
 
 # --- Local App Imports ---
-from .models import Visit, Citizen, Diagnosis, Disease
+from .models import Vaccination, Visit, Citizen, Diagnosis, Disease
 from .serializers import (
     MedicalHistorySerializer, 
     VisitFullDetailSerializer,
@@ -147,10 +147,26 @@ def get_facilities(request):
 
     return Response(data)
 
-
 # ==========================================
 # READ DATA (GET REQUESTS)
 # ==========================================
+
+@api_view(['GET'])
+def vaccination_history(request, citizen_id):
+    data = Vaccination.objects.select_related('vaccine', 'centre') \
+        .filter(citizen_id=citizen_id) \
+        .order_by('-vaccination_date')
+
+    result = []
+    for v in data:
+        result.append({
+            "vaccine": v.vaccine.name,
+            "date": v.vaccination_date,
+            "dose": v.dose_no,
+            "centre": v.centre.name
+        })
+
+    return Response(result)
 
 class CitizenMedicalHistoryAPIView(generics.ListAPIView):
     serializer_class = MedicalHistorySerializer
@@ -183,6 +199,49 @@ class VisitDetailAPIView(generics.RetrieveAPIView):
             'lab_orders__results',        # ✅ FIXED
             'admission_set__ward__facility'
         )
+    
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from datetime import date
+from inventory.models import Item, VaccPrereqAge
+from clinical.models import Vaccination, Citizen  # adjust import if needed
+
+@api_view(['GET'])
+def eligible_vaccines(request, citizen_id):
+    try:
+        citizen = Citizen.objects.get(pk=citizen_id)
+
+        # 🔥 calculate age
+        today = date.today()
+        age = today.year - citizen.dob.year - (
+            (today.month, today.day) < (citizen.dob.month, citizen.dob.day)
+        )
+
+        # 🔥 vaccines already taken
+        taken_vaccine_ids = Vaccination.objects.filter(
+            citizen_id=citizen_id
+        ).values_list('vaccine_id', flat=True)
+
+        # 🔥 eligible vaccines
+        vaccines = Item.objects.filter(
+            type='vaccine',
+            vaccprereqage__age_limit__lte=age
+        ).exclude(
+            id__in=taken_vaccine_ids
+        ).distinct()
+
+        data = [
+            {
+                "id": v.id,
+                "name": v.name
+            }
+            for v in vaccines
+        ]
+
+        return Response(data)
+
+    except Citizen.DoesNotExist:
+        return Response({"error": "Citizen not found"}, status=404)
 
 # ==========================================
 # ANALYTICS & DASHBOARD (GET REQUESTS)

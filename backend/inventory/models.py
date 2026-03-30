@@ -208,7 +208,8 @@ class VaccPrereqAge(models.Model):
     vaccine = models.ForeignKey(
         Item,
         on_delete=models.CASCADE,
-        db_column='vaccine_id'
+        db_column='vaccine_id',
+        related_name='vaccprereqage'
     )
 
     age_limit = models.IntegerField(default=0)

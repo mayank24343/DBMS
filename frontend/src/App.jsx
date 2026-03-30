@@ -10,6 +10,8 @@ import CreateVisit from './pages/CreateVisit';
 import AdminDashboard from './pages/AdminDashboard';
 import BookAppointment from './pages/BookAppointment';
 import ServiceDirectory from './pages/ServiceDirectory';
+import VaccinationHistory from './pages/VaccinationHistory';
+import CitizenDashboard from './pages/CitizenDashboard';
 
 function CitizenWrapper() {
   const { aadharNo } = useParams();
@@ -71,6 +73,9 @@ function App() {
               <Route path="/worker/:facId/new-visit" element={<CreateVisit />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/directory" element={<ServiceDirectory />} />
+              <Route path="/citizen/dashboard" element={<CitizenDashboard />} />
+              <Route path="/citizen/vaccination/history" element={<VaccinationHistory />} />
+              <Route path="/citizen/vaccination/eligible" element={<VaccinationHistory />} />
               
               {/* Fallback route if they type a bad URL */}
               <Route path="*" element={<Navigate to="/" replace />} />
