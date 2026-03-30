@@ -176,7 +176,7 @@ class InventoryTransfer(models.Model):
     class Meta:
         db_table = 'inventory_transfer'
         managed = False
-
+        
 class ItemUse(models.Model):
     id = models.BigAutoField(primary_key=True)
 
@@ -191,6 +191,8 @@ class ItemUse(models.Model):
         on_delete=models.CASCADE,
         db_column='fac_id'
     )
+
+    quantity = models.IntegerField()   # ✅ NEW
 
     use_date = models.DateField()
 
