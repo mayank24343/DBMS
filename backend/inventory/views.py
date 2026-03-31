@@ -5,7 +5,7 @@ from django.db.models import F
 from django.utils import timezone
 from datetime import date, timedelta
 
-from backend.inventory.services.supply_chain import fulfill_request
+from inventory.services.supply_chain import fulfill_request
 from .models import Inventory, InventoryTransfer, Listing, SupplierOrder
 from .serializers import InventoryAlertSerializer
 
@@ -123,3 +123,5 @@ def request_from_warehouse(request):
 
     else:
         return Response({"status": "insufficient, trigger purchase"})
+    
+    
