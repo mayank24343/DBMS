@@ -6,7 +6,7 @@ import Login from './pages/Login';
 import MedicalHistory from './pages/MedicalHistory';
 import VisitDetails from './pages/VisitDetails';
 import FacilityDashboard from './pages/FacilityDashboard';
-import CreateVisit from './pages/CreateVisit';
+
 import AdminDashboard from './pages/AdminDashboard';
 import BookAppointment from './pages/BookAppointment';
 import ServiceDirectory from './pages/ServiceDirectory';

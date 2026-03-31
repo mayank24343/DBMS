@@ -1,133 +1,115 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { searchHealthDirectory } from '../services/api';
-import { Search, FlaskConical, Pill, Activity, MapPin, Phone } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { citizenAPI } from '../services/api';
+import { Search, Filter, MapPin, Stethoscope, Pill, TestTube } from 'lucide-react';
 
 const ServiceDirectory = () => {
-    const [searchType, setSearchType] = useState('lab');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [results, setResults] = useState([]);
-    const [hasSearched, setHasSearched] = useState(false);
-    const [isSearching, setIsSearching] = useState(false);
+  const [query, setQuery] = useState('');
+  const [type, setType] = useState('lab');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-    const handleSearch = async (e) => {
-        e.preventDefault();
-        if (!searchQuery.trim()) return;
-        
-        setIsSearching(true);
-        const data = await searchHealthDirectory(searchType, searchQuery);
-        setResults(data);
-        setHasSearched(true);
-        setIsSearching(false);
-    };
+  const types = [
+    { value: 'lab', label: 'Labs', icon: TestTube },
+    { value: 'pharmacy', label: 'Pharmacies', icon: Pill },
+    { value: 'procedure', label: 'Procedures', icon: Stethoscope }
+  ];
 
-    return (
-        <div className="max-w-5xl mx-auto p-6 mt-4">
-            
-            {/* Header */}
-            <div className="text-center mb-10">
-                <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-3">National Health Directory</h1>
-                <p className="text-lg text-gray-500 font-medium">Find labs, pharmacies, and specialized procedures near you.</p>
-            </div>
+  const search = async () => {
+    if (!query.trim()) return;
+    
+    setLoading(true);
+    try {
+      const data = await citizenAPI.searchDirectory(type, query);
+      setResults(data);
+    } catch (err) {
+      console.error('Search failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            {/* Search Box */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-10">
-                
-                {/* Tabs */}
-                <div className="flex border-b border-gray-200 bg-gray-50">
-                    <button 
-                        onClick={() => setSearchType('lab')}
-                        className={`flex-1 py-4 text-sm font-bold flex justify-center items-center gap-2 transition-colors ${searchType === 'lab' ? 'bg-white text-purple-700 border-b-2 border-purple-700' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                        <FlaskConical className="w-5 h-5" /> Lab Tests
-                    </button>
-                    <button 
-                        onClick={() => setSearchType('pharmacy')}
-                        className={`flex-1 py-4 text-sm font-bold flex justify-center items-center gap-2 transition-colors ${searchType === 'pharmacy' ? 'bg-white text-emerald-700 border-b-2 border-emerald-700' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                        <Pill className="w-5 h-5" /> Medicines
-                    </button>
-                    <button 
-                        onClick={() => setSearchType('procedure')}
-                        className={`flex-1 py-4 text-sm font-bold flex justify-center items-center gap-2 transition-colors ${searchType === 'procedure' ? 'bg-white text-blue-700 border-b-2 border-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                        <Activity className="w-5 h-5" /> Procedures
-                    </button>
-                </div>
+  useEffect(() => {
+    if (query.length >= 2) {
+      const timeoutId = setTimeout(search, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [query, type]);
 
-                {/* Input Area */}
-                <form onSubmit={handleSearch} className="p-6 flex gap-4">
-                    <div className="relative flex-grow">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <Search className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder={
-                                searchType === 'lab' ? 'e.g., Blood Panel, MRI, X-Ray...' :
-                                searchType === 'pharmacy' ? 'e.g., Amoxicillin, Paracetamol...' :
-                                'e.g., Appendectomy, Dialysis...'
-                            }
-                            className="w-full pl-11 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium transition-all"
-                        />
-                    </div>
-                    <button 
-                        type="submit"
-                        disabled={isSearching}
-                        className="bg-gray-900 hover:bg-black text-white px-8 py-4 rounded-xl font-bold shadow-md transition-all whitespace-nowrap"
-                    >
-                        {isSearching ? 'Searching...' : 'Search Network'}
-                    </button>
-                </form>
-            </div>
+  return (
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+          Find Healthcare Services
+        </h1>
+        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          Search for labs, pharmacies, or procedures near you
+        </p>
+      </div>
 
-            {/* Results Grid */}
-            {hasSearched && (
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Search Results ({results.length})</h2>
-                    
-                    {results.length === 0 ? (
-                        <div className="bg-gray-50 p-10 rounded-2xl text-center border-2 border-dashed border-gray-200">
-                            <p className="text-gray-500 font-medium">No facilities found offering "{searchQuery}" in your area.</p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {results.map((facility) => (
-                                <div key={facility.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div>
-                                            <h3 className="text-lg font-bold text-gray-900">{facility.name}</h3>
-                                            <span className="inline-block bg-blue-50 text-blue-700 text-xs font-bold px-2 py-1 rounded mt-1">
-                                                {facility.type}
-                                            </span>
-                                        </div>
-                                        <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
-                                            {facility.distance}
-                                        </span>
-                                    </div>
-                                    
-                                    <div className="space-y-2 text-sm text-gray-600 mb-6">
-                                        <p className="flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-400" /> {facility.address}</p>
-                                        <p className="flex items-center gap-2"><Phone className="w-4 h-4 text-gray-400" /> {facility.contact}</p>
-                                    </div>
-
-                                    {/* Action Button */}
-                                    <Link 
-                                        to={`/citizen/123456789012/book`} // Using the hardcoded citizen ID for demo purposes
-                                        className="block w-full text-center bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold py-2.5 rounded-lg transition-colors"
-                                    >
-                                        Book Service Here
-                                    </Link>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
+      {/* Search Bar */}
+      <div className="bg-white rounded-3xl shadow-xl p-8 max-w-2xl mx-auto mb-12">
+        <div className="flex gap-4 mb-6">
+          <div className="flex-1 relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search for hospitals, labs, pharmacies..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-lg"
+            />
+          </div>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="px-6 py-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+          >
+            {types.map(t => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
         </div>
-    );
+      </div>
+
+      {/* Results */}
+      {loading && (
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600 font-medium">Searching...</p>
+        </div>
+      )}
+
+      {results.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {results.map((facility) => (
+            <div key={facility.id} className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-all hover:-translate-y-1 p-8">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
+                  <MapPin className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-xl text-gray-900">{facility.name}</h3>
+                  <p className="text-gray-600">{facility.type}</p>
+                </div>
+              </div>
+              <p className="text-gray-600 mb-6 leading-relaxed">{facility.address}</p>
+              <button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all">
+                Book Appointment
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : query.length > 0 && !loading && (
+        <div className="text-center py-20 bg-gray-50 rounded-3xl">
+          <MapPin className="w-20 h-20 text-gray-300 mx-auto mb-6" />
+          <h3 className="text-xl font-bold text-gray-700 mb-2">No results found</h3>
+          <p className="text-gray-500 max-w-md mx-auto">Try a different search term or service type</p>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default ServiceDirectory;

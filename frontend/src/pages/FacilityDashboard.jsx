@@ -1,189 +1,272 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { getBedAvailability, getLowStockAlerts, getNearExpiryAlerts } from '../services/api';
-import { Building2, Bed, AlertTriangle, Clock, PackageX, PlusCircle } from 'lucide-react';
+import { facilityAPI } from '../services/api';
+import { Hospital, Users, TrendingUp, ClipboardList, Syringe, FileText, ShoppingCart, AlertCircle } from 'lucide-react';
 
 const FacilityDashboard = () => {
-    const { facId } = useParams();
-    const [wards, setWards] = useState([]);
-    const [lowStock, setLowStock] = useState([]);
-    const [expiring, setExpiring] = useState([]);
-    const [loading, setLoading] = useState(true);
+  const [occupancy, setOccupancy] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [lowStock, setLowStock] = useState([]);
+  const [nearExpiry, setNearExpiry] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const facilityId = localStorage.getItem('facility_id');
 
-    useEffect(() => {
-        // Fetch all three endpoints simultaneously 
-        Promise.all([
-            getBedAvailability(facId),
-            getLowStockAlerts(facId),
-            getNearExpiryAlerts(facId)
-        ])
-        .then(([wardsData, stockData, expiryData]) => {
-            setWards(wardsData);
-            setLowStock(stockData);
-            setExpiring(expiryData);
-            setLoading(false);
-        })
-        .catch(err => {
-            console.error("Error loading facility data:", err);
-            setLoading(false);
-        });
-    }, [facId]);
-
-    const handleOrder = (itemName, shortfall) => {
-        alert(`Initiating automated Supplier Order for ${shortfall} units of ${itemName}...`);
-    };
-
-    if (loading) {
-        return <div className="flex justify-center items-center h-64 text-indigo-600 font-bold animate-pulse">Synchronizing Facility Data...</div>;
+  useEffect(() => {
+    if (facilityId) {
+      loadDashboardData();
     }
+  }, [facilityId]);
 
-    return (
-        <div className="max-w-7xl mx-auto p-6">
-            
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                <div>
-                    <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
-                        <Building2 className="text-indigo-600 w-8 h-8" />
-                        Facility Operations Center
-                    </h1>
-                    <p className="text-gray-500 font-medium mt-1">Managing Facility ID: {facId}</p>
-                </div>
-                <Link 
-                    to={`/worker/${facId}/new-visit`} 
-                    className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-sm transition-colors"
-                >
-                    <PlusCircle className="w-5 h-5" /> Log Patient Visit
-                </Link>
+  const loadDashboardData = async () => {
+    setLoading(true);
+    try {
+      // Occupancy
+      const occData = await fetchOccupancy(facilityId);
+      setOccupancy(occData);
+      
+      // Today's appointments
+      const appts = await fetchAppointments(facilityId);
+      setAppointments(appts);
+      
+      // Inventory alerts
+      const low = await fetchLowStock(facilityId);
+      setLowStock(low);
+      
+      const expiry = await fetchNearExpiry(facilityId);
+      setNearExpiry(expiry);
+    } catch (err) {
+      console.error('Dashboard load failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Mock API calls - replace with real endpoints
+  const fetchOccupancy = async (facId) => {
+    const res = await fetch(`http://127.0.0.1:8000/facilities/api/occupancy/${facId}/`);
+    return res.json();
+  };
+
+  const fetchAppointments = async (facId) => {
+    const res = await fetch(`http://127.0.0.1:8000/facilities/api/appointments/${facId}/today/`);
+    return res.json();
+  };
+
+  const fetchLowStock = async (facId) => {
+    const res = await fetch(`http://127.0.0.1:8000/inventory/api/low-stock/${facId}/`);
+    return res.json();
+  };
+
+  const fetchNearExpiry = async (facId) => {
+    const res = await fetch(`http://127.0.0.1:8000/inventory/api/near-expiry/${facId}/`);
+    return res.json();
+  };
+
+  if (loading) return <div>Loading dashboard...</div>;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-12">
+          <div className="flex items-center gap-4">
+            <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg">
+              <Hospital className="w-10 h-10 text-white" />
             </div>
-
-            {/* SECTION 1: Bed Management */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 mb-8 overflow-hidden">
-                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                    <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                        <Bed className="text-blue-500 w-5 h-5" /> Live Ward Capacity
-                    </h2>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold">
-                            <tr>
-                                <th className="px-6 py-3">Ward Type</th>
-                                <th className="px-6 py-3">Capacity</th>
-                                <th className="px-6 py-3">Occupied</th>
-                                <th className="px-6 py-3">Available Status</th>
-                                <th className="px-6 py-3 text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {wards.length === 0 ? (
-                                <tr><td colSpan="5" className="px-6 py-8 text-center text-gray-500 italic">No ward data configured.</td></tr>
-                            ) : (
-                                wards.map((ward) => (
-                                    <tr key={ward.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4 font-bold text-gray-900">{ward.type}</td>
-                                        <td className="px-6 py-4 text-gray-600">{ward.total}</td>
-                                        <td className="px-6 py-4 text-gray-600">{ward.occupied}</td>
-                                        <td className="px-6 py-4">
-                                            {ward.available === 0 ? (
-                                                <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full font-bold text-xs">FULL (0)</span>
-                                            ) : ward.available <= 2 ? (
-                                                <span className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full font-bold text-xs">CRITICAL ({ward.available})</span>
-                                            ) : (
-                                                <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold text-xs">AVAILABLE ({ward.available})</span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button 
-                                                disabled={ward.available === 0}
-                                                className={`px-4 py-2 rounded-lg font-bold text-xs transition-colors ${ward.available === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'}`}
-                                            >
-                                                Admit Patient
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+            <div>
+              <h1 className="text-4xl font-black bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                Facility Dashboard
+              </h1>
+              <p className="text-xl text-gray-600">Facility ID: {facilityId}</p>
             </div>
-
-            {/* SECTION 2: Supply Chain (Split Grid) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* Low Stock Alerts */}
-                <div className="bg-white rounded-2xl shadow-sm border border-red-100 overflow-hidden">
-                    <div className="bg-red-50 px-6 py-4 border-b border-red-100 flex items-center justify-between">
-                        <h2 className="text-lg font-bold text-red-900 flex items-center gap-2">
-                            <PackageX className="text-red-600 w-5 h-5" /> Critical Shortages
-                        </h2>
-                    </div>
-                    <ul className="divide-y divide-gray-100 p-2">
-                        {lowStock.length === 0 ? (
-                            <li className="p-6 text-center text-gray-500 italic">Inventory levels nominal.</li>
-                        ) : (
-                            lowStock.map((item) => (
-                                <li key={item.id} className="p-4 flex items-center justify-between hover:bg-red-50/50 rounded-xl transition-colors">
-                                    <div>
-                                        <p className="font-bold text-gray-900">{item.item_name}</p>
-                                        <p className="text-xs text-gray-500 mt-1">Type: {item.item_type} | Threshold: {item.threshold}</p>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-right">
-                                            <p className="text-xl font-black text-red-600">{item.quantity}</p>
-                                            <p className="text-xs font-bold text-red-400 uppercase tracking-wider">In Stock</p>
-                                        </div>
-                                        <button 
-                                            onClick={() => handleOrder(item.item_name, item.shortfall)}
-                                            className="bg-gray-900 hover:bg-black text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors"
-                                        >
-                                            Order
-                                        </button>
-                                    </div>
-                                </li>
-                            ))
-                        )}
-                    </ul>
-                </div>
-
-                {/* Expiring Soon */}
-                <div className="bg-white rounded-2xl shadow-sm border border-amber-100 overflow-hidden">
-                    <div className="bg-amber-50 px-6 py-4 border-b border-amber-100 flex items-center justify-between">
-                        <h2 className="text-lg font-bold text-amber-900 flex items-center gap-2">
-                            <Clock className="text-amber-600 w-5 h-5" /> Expiring &lt; 30 Days
-                        </h2>
-                    </div>
-                    <ul className="divide-y divide-gray-100 p-2">
-                        {expiring.length === 0 ? (
-                            <li className="p-6 text-center text-gray-500 italic">No items expiring soon.</li>
-                        ) : (
-                            expiring.map((item) => {
-                                const isExpired = new Date(item.expiry) < new Date();
-                                return (
-                                    <li key={item.id} className="p-4 flex items-center justify-between hover:bg-amber-50/50 rounded-xl transition-colors">
-                                        <div>
-                                            <p className="font-bold text-gray-900">{item.item_name}</p>
-                                            <p className="text-xs text-gray-500 mt-1">Qty: {item.quantity}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className={`font-bold ${isExpired ? 'text-red-600' : 'text-amber-600'}`}>
-                                                {item.expiry}
-                                            </p>
-                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                                                {isExpired ? 'EXPIRED' : 'Expires On'}
-                                            </p>
-                                        </div>
-                                    </li>
-                                );
-                            })
-                        )}
-                    </ul>
-                </div>
-
-            </div>
+          </div>
         </div>
-    );
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="p-3 bg-red-100 rounded-2xl">
+                <Users className="w-8 h-8 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Occupancy</p>
+              </div>
+            </div>
+            <div className="text-4xl font-black text-gray-900">{occupancy?.occupied || 0}/{occupancy?.total || 0}</div>
+            <div className="text-green-600 font-bold text-xl">{occupancy?.vacant || 0} beds available</div>
+          </div>
+
+          <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="p-3 bg-blue-100 rounded-2xl">
+                <Calendar className="w-8 h-8 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Today's Appointments</p>
+              </div>
+            </div>
+            <div className="text-4xl font-black text-gray-900">{appointments.length}</div>
+            <div className="text-blue-600 font-bold text-xl">Patients scheduled</div>
+          </div>
+
+          <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="p-3 bg-orange-100 rounded-2xl">
+                <AlertCircle className="w-8 h-8 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Low Stock Items</p>
+              </div>
+            </div>
+            <div className="text-4xl font-black text-gray-900">{lowStock.length}</div>
+            <div className="text-orange-600 font-bold text-xl">Needs reordering</div>
+          </div>
+
+          <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="p-3 bg-yellow-100 rounded-2xl">
+                <TrendingUp className="w-8 h-8 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Expiring Soon</p>
+              </div>
+            </div>
+            <div className="text-4xl font-black text-gray-900">{nearExpiry.length}</div>
+            <div className="text-yellow-600 font-bold text-xl">Check inventory</div>
+          </div>
+        </div>
+
+        {/* Action Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all cursor-pointer group" onClick={() => setShowCreateVisit(true)}>
+            <ClipboardList className="w-12 h-12 mx-auto mb-4 opacity-90 group-hover:scale-110 transition-transform" />
+            <h3 className="text-xl font-bold mb-2">Create New Visit</h3>
+            <p className="opacity-90">Register new patient visit</p>
+          </div>
+          
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all cursor-pointer group">
+            <ClipboardList className="w-12 h-12 mx-auto mb-4 opacity-90 group-hover:scale-110 transition-transform" />
+            <h3 className="text-xl font-bold mb-2">Create Diagnosis</h3>
+            <p className="opacity-90">Add diagnosis, prescribe meds & tests</p>
+          </div>
+          
+          <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all cursor-pointer group">
+            <Users className="w-12 h-12 mx-auto mb-4 opacity-90 group-hover:scale-110 transition-transform" />
+            <h3 className="text-xl font-bold mb-2">Admit/Discharge</h3>
+            <p className="opacity-90">Patient admissions & ward management</p>
+          </div>
+          
+          <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all cursor-pointer group">
+            <ShoppingCart className="w-12 h-12 mx-auto mb-4 opacity-90 group-hover:scale-110 transition-transform" />
+            <h3 className="text-xl font-bold mb-2">Place Orders</h3>
+            <p className="opacity-90">Order from suppliers & warehouses</p>
+          </div>
+        </div>
+
+        {/* Create Visit Modal */}
+        {showCreateVisit && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl p-8 max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">New Visit</h2>
+                <button onClick={() => setShowCreateVisit(false)} className="text-gray-500 hover:text-gray-700">
+                  ×
+                </button>
+              </div>
+              <form onSubmit={handleCreateVisit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Citizen ID/Aadhar</label>
+                  <input
+                    type="text"
+                    value={newVisit.citizenId}
+                    onChange={(e) => setNewVisit({...newVisit, citizenId: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter citizen ID or aadhar"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Reason</label>
+                  <textarea
+                    rows="3"
+                    value={newVisit.reason}
+                    onChange={(e) => setNewVisit({...newVisit, reason: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 resize-vertical"
+                    placeholder="Symptoms or reason for visit"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Creating...' : 'Create Visit'}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Appointments Table */}
+          <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+              <Calendar className="w-8 h-8 text-blue-600" />
+              Today's Appointments
+            </h2>
+            {appointments.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                No appointments scheduled today
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {appointments.slice(0, 5).map((appt) => (
+                  <div key={appt.visit_id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                    <div>
+                      <div className="font-bold text-gray-900">{appt.name}</div>
+                      <div className="text-sm text-gray-600">{appt.reason}</div>
+                    </div>
+                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">
+                      {appt.visit_id}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Low Stock Alerts */}
+          <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+              <AlertCircle className="w-8 h-8 text-orange-600" />
+              Low Stock Alerts
+            </h2>
+            {lowStock.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                All stock levels good
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {lowStock.slice(0, 5).map((item) => (
+                  <div key={item.id} className="flex items-center justify-between p-4 bg-orange-50 border border-orange-200 rounded-xl">
+                    <div>
+                      <div className="font-bold">{item.item}</div>
+                      <div className="text-sm text-orange-800">Qty: {item.quantity}/{item.threshold}</div>
+                    </div>
+                    <button className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-700">
+                      Reorder
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default FacilityDashboard;

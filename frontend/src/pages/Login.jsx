@@ -48,7 +48,7 @@ const Login = () => {
 
             if (data.role === "citizen") {
                 localStorage.setItem("citizen_id", data.citizen_id);
-                navigate(`/CitizenDashboard`);
+                navigate('/citizen-dashboard');
             }
 
             else if (data.role === "worker") {

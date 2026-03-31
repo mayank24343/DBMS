@@ -1,24 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getMedicalHistory } from '../services/api';
+import { citizenAPI } from '../services/api';
 import { Activity, Hospital, Calendar, ChevronRight } from 'lucide-react';
 
-const MedicalHistory = ({ aadharNo }) => {
+const MedicalHistory = ({ citizenId }) => {
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        getMedicalHistory(aadharNo)
+        citizenAPI.medicalHistory(citizenId)
             .then(data => {
                 setHistory(data);
                 setLoading(false);
-                console.log("Fetched history:", data);
             })
             .catch(err => {
                 console.error("Failed to fetch history:", err);
                 setLoading(false);
             });
-    }, [aadharNo]);
+    }, [citizenId]);
 
     if (loading) {
         return (
@@ -38,13 +37,13 @@ const MedicalHistory = ({ aadharNo }) => {
                     </div>
                     <div>
                         <h1 className="text-3xl font-extrabold text-gray-900">Medical History</h1>
-                        <p className="text-sm font-medium text-gray-500 mt-1">Citizen Aadhar: {aadharNo}</p>
+                        <p className="text-sm font-medium text-gray-500 mt-1">Citizen ID: {citizenId}</p>
                     </div>
                 </div>
                 
                 {/* NEW BOOKING BUTTON */}
                 <Link 
-                    to={`/citizen/${aadharNo}/book`}
+                    to="/book"
                     className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2"
                 >
                     <Calendar className="w-5 h-5" /> Book Appointment
@@ -62,13 +61,12 @@ const MedicalHistory = ({ aadharNo }) => {
                         <Link 
                             to={`/visit/${visit.id}`} 
                             key={visit.id} 
-                            // This is where the Tailwind magic happens:
                             className="block group bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md hover:border-blue-400 transition-all duration-200 relative pr-12"
                         >
                             <div className="flex justify-between items-start mb-3">
                                 <div className="flex items-center gap-2 text-lg font-bold text-gray-800 group-hover:text-blue-700 transition-colors">
                                     <Hospital className="w-5 h-5 text-blue-500" />
-                                    {visit.facility_name}
+                                    {visit.facility || visit.facility_name || 'Facility'}
                                 </div>
                                 <div className="flex items-center gap-1 text-xs font-bold text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full">
                                     <Calendar className="w-4 h-4" />
@@ -77,18 +75,18 @@ const MedicalHistory = ({ aadharNo }) => {
                             </div>
                             
                             <p className="text-gray-600 mb-4 ml-7 text-sm leading-relaxed">
-                                <span className="font-semibold text-gray-900">Reason for visit:</span> {visit.reason}
+                                <span className="font-semibold text-gray-900">Reason:</span> {visit.reason}
                             </p>
                             
                             {/* Diagnosis Badges */}
-                            {visit.diagnoses && visit.diagnoses.length > 0 && (
+                            {(visit.diagnoses || []).length > 0 && (
                                 <div className="flex flex-wrap gap-2 ml-7">
                                     {visit.diagnoses.map((d, idx) => (
                                         <span 
                                             key={idx} 
                                             className="bg-red-50 text-red-700 border border-red-200 text-xs font-bold px-3 py-1 rounded-md tracking-wide"
                                         >
-                                            {d.disease_name}
+                                            {d.disease || d.disease_name || 'Diagnosis'}
                                         </span>
                                     ))}
                                 </div>

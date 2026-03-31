@@ -1,118 +1,67 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
-export const getMedicalHistory = async (aadharNo) => {
-    try {
-        // This hits the endpoint we just tested! [cite: 40]
-        const response = await axios.get(`${API_BASE_URL}/vaccines/history/${aadharNo}/`);
-        return response.data;
-    } catch (error) {
-        console.error("Error fetching history:", error);
-        throw error;
-    }
+const api = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+// Auth interceptor
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export const authAPI = {
+  login: async (identifier, password, role) => {
+    const response = await api.post('accounts/api/login/', { identifier, password, role });
+    return response.data;
+  },
 };
 
-export const getVaccinationHistory = async (citizenId) => {
-    try {
-        // This hits the endpoint we just tested! [cite: 40]
-        const response = await axios.get(`${API_BASE_URL}/vaccination/${citizenId}/`);
-        return response.data;
-    } catch (error) {
-        console.error("Error fetching history:", error);
-        throw error;
-    }
+export const citizenAPI = {
+  medicalHistory: async (citizenId) => {
+    const response = await api.get('clinical/api/history/<int:citizen_id>/'.replace('<int:citizen_id>', citizenId));
+    return response.data;
+  },
+  vaccinationHistory: async (citizenId) => {
+    const response = await api.get('clinical/api/vaccinations/<int:citizen_id>/'.replace('<int:citizen_id>', citizenId));
+    return response.data;
+  },
+  eligibleVaccines: async (citizenId) => {
+    const response = await api.get('clinical/api/vaccines/eligible/<int:citizen_id>/'.replace('<int:citizen_id>', citizenId));
+    return response.data;
+  },
+  visitDetail: async (visitId) => {
+    const response = await api.get('clinical/api/visit/<int:id>/'.replace('<int:id>', visitId));
+    return response.data;
+  },
+  bookAppointment: async (appointmentData) => {
+    const response = await api.post('clinical/api/appointments/book/', appointmentData);
+    return response.data;
+  },
+  searchDirectory: async (searchType, searchQuery) => {
+    const response = await api.get('clinical/api/directory/search/', {
+      params: { type: searchType, query: searchQuery }
+    });
+    return response.data;
+  },
 };
 
-export const getInventoryAlerts = async (facId) => {
-    try {
-        // This handles Query #8 (Low Stock) [cite: 47]
-        const response = await axios.get(`${API_BASE_URL}/alerts/low-stock/${facId}/`);
-        return response.data;
-    } catch (error) {
-        console.error("Error fetching alerts:", error);
-        throw error;
-    }
+export const facilityAPI = {
+  getFacilities: async () => {
+    const response = await api.get('facilities/api/facilities/');
+    return response.data;
+  },
+  searchFacilities: async (query, type) => {
+    const response = await api.get('api/search/', {
+      params: { q: query, type }
+    });
+    return response.data;
+  },
 };
 
-export const getDiseaseTrends = async (diseaseId) => {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/stats/disease/${diseaseId}/trends/`);
-        return response.data;
-    } catch (error) {
-        console.error("Error fetching disease trends:", error);
-        return []; // Return empty array so the UI doesn't crash on error
-    }
-};
-
-export const getVisitDetails = async (visitId) => {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/visit/${visitId}/`);
-        return response.data;
-    } catch (error) {
-        console.error("Error fetching visit details:", error);
-        throw error;
-    }
-};
-
-export const getBedAvailability = async (facId) => {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/wards/${facId}/`);
-        return response.data;
-    } catch (error) {
-        console.error("Error fetching bed availability:", error);
-        return [];
-    }
-};
-
-export const getLowStockAlerts = async (facId) => {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/alerts/low-stock/${facId}/`);
-        return response.data;
-    } catch (error) {
-        console.error("Error fetching low stock alerts:", error);
-        return [];
-    }
-};
-
-export const getNearExpiryAlerts = async (facId) => {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/alerts/expiry/${facId}/`);
-        return response.data;
-    } catch (error) {
-        console.error("Error fetching expiry alerts:", error);
-        return [];
-    }
-};
-
-export const createNewVisit = async (visitData) => {
-    try {
-        const response = await axios.post(`${API_BASE_URL}/visit/new/`, visitData);
-        return response.data;
-    } catch (error) {
-        console.error("Error creating visit:", error.response?.data || error);
-        throw error.response?.data?.error || "Failed to create visit";
-    }
-};
-
-export const bookCitizenAppointment = async (appointmentData) => {
-    try {
-        const response = await axios.post(`${API_BASE_URL}/appointments/book/`, appointmentData);
-        return response.data;
-    } catch (error) {
-        console.error("Error booking appointment:", error.response?.data || error);
-        throw error.response?.data?.error || "Failed to book appointment";
-    }
-};
-
-export const searchHealthDirectory = async (searchType, searchQuery) => {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/directory/search/`, {
-            params: { type: searchType, query: searchQuery }
-        });
-        return response.data;
-    } catch (error) {
-        console.error("Error searching directory:", error);
-        return [];
-    }
-};
+export default api;
