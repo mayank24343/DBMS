@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldPlus } from 'lucide-react';
 
-const Login = ({ onLogin }) => {
+const Login = () => {
     const navigate = useNavigate();
 
     const [role, setRole] = useState('citizen');
@@ -19,9 +19,7 @@ const Login = ({ onLogin }) => {
         try {
             const res = await fetch("http://127.0.0.1:8000/api/login/", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     identifier,
                     password,
@@ -29,28 +27,40 @@ const Login = ({ onLogin }) => {
                 })
             });
             console.log(JSON.stringify({
-                identifier,
-                password,
-                role
-            }));
-            const data = await res.json();
+                    identifier,
+                    password,
+                    role
+                }));
 
-            if (!res.ok) throw new Error(data.error);
+            // 🔥 FIX: HANDLE HTML ERROR RESPONSE
+            const text = await res.text();
+            let data;
 
-            // 🔥 STORE BASED ON ROLE
+            try {
+                data = JSON.parse(text);
+            } catch {
+                throw new Error("Server error (likely wrong URL or CORS)");
+            }
+
+            if (!res.ok) throw new Error(data.error || "Login failed");
+
+            // ================= ROUTING =================
+
             if (data.role === "citizen") {
                 localStorage.setItem("citizen_id", data.citizen_id);
-                navigate("/dashboard");
+                navigate(`/CitizenDashboard`);
             }
 
             else if (data.role === "worker") {
                 localStorage.setItem("worker_id", data.worker_id);
-                navigate(`/facility/${data.worker_id}`);
+
+                // 🔥 IMPORTANT: worker → facility
+                navigate(`/facility/${data.facility_id}`);
             }
 
             else if (data.role === "supplier") {
                 localStorage.setItem("supplier_id", data.supplier_id);
-                navigate(`/supplier/dashboard`);
+                navigate(`/supplier/${data.supplier_id}`);
             }
 
             else if (data.role === "admin") {
@@ -67,93 +77,65 @@ const Login = ({ onLogin }) => {
 
     return (
         <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-200">
+            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border">
 
-                {/* Header */}
-                <div className="flex flex-col items-center mb-8">
-                    <div className="bg-blue-600 p-3 rounded-full mb-3">
-                        <ShieldPlus className="w-8 h-8 text-white" />
-                    </div>
-                    <h1 className="text-2xl font-extrabold text-gray-900">
-                        National Health System
-                    </h1>
-                    <p className="text-gray-500 font-medium mt-1">
-                        Secure Portal Access
-                    </p>
+                <div className="text-center mb-6">
+                    <ShieldPlus className="mx-auto text-blue-600" size={40} />
+                    <h1 className="text-2xl font-bold mt-2">National Health System</h1>
                 </div>
 
-                <form onSubmit={handleLogin} className="space-y-5">
-
-                    {/* Error */}
-                    {error && (
-                        <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm font-medium">
-                            {error}
-                        </div>
-                    )}
-
-                    {/* Role */}
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">
-                            Access Role
-                        </label>
-                        <select
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                            className="w-full p-3 border rounded-xl bg-gray-50"
-                        >
-                            <option value="citizen">Citizen</option>
-                            <option value="worker">Healthcare Worker</option>
-                            <option value="admin">Dept Admin</option>
-                        </select>
+                {error && (
+                    <div className="bg-red-100 text-red-700 p-2 rounded mb-4 text-sm">
+                        {error}
                     </div>
+                )}
 
-                    {/* Identifier */}
-                    {role !== 'admin' && (
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">
-                                {role === 'citizen'
-                                    ? 'Citizen ID or Aadhar'
-                                    : 'Worker / Facility ID'}
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={identifier}
-                                onChange={(e) => setIdentifier(e.target.value)}
-                                placeholder={
-                                    role === 'citizen'
-                                        ? 'Enter Citizen ID OR Aadhar'
-                                        : 'Enter ID'
-                                }
-                                className="w-full p-3 border rounded-xl"
-                            />
-                        </div>
-                    )}
+                <form onSubmit={handleLogin} className="space-y-4">
 
-                    {/* Password */}
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">
-                            Password
-                        </label>
+                    {/* ROLE */}
+                    <select
+                        value={role}
+                        onChange={(e) => setRole(e.target.value)}
+                        className="w-full p-3 border rounded-xl"
+                    >
+                        <option value="citizen">Citizen</option>
+                        <option value="worker">Healthcare Worker</option>
+                        <option value="supplier">Supplier</option> {/* 🔥 FIX */}
+                        <option value="admin">Admin</option>
+                    </select>
+
+                    {/* IDENTIFIER */}
+                    {role !== "admin" && (
                         <input
-                            type="password"
-                            required
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            type="text"
+                            placeholder={
+                                role === "citizen"
+                                    ? "Citizen ID or Aadhar"
+                                    : "Enter ID"
+                            }
+                            value={identifier}
+                            onChange={(e) => setIdentifier(e.target.value)}
                             className="w-full p-3 border rounded-xl"
+                            required
                         />
-                    </div>
+                    )}
 
-                    {/* Submit */}
+                    {/* PASSWORD */}
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full p-3 border rounded-xl"
+                        required
+                    />
+
                     <button
                         type="submit"
                         disabled={loading}
-                        className={`w-full py-3 rounded-xl font-bold text-white ${loading
-                                ? "bg-blue-400"
-                                : "bg-blue-600 hover:bg-blue-700"
-                            }`}
+                        className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold"
                     >
-                        {loading ? "Logging in..." : "Secure Login"}
+                        {loading ? "Logging in..." : "Login"}
                     </button>
 
                 </form>

@@ -6,60 +6,69 @@ from django.utils import timezone
 from datetime import date, timedelta
 
 from inventory.services.supply_chain import fulfill_request
-from .models import Inventory, InventoryTransfer, Listing, SupplierOrder
-from .serializers import InventoryAlertSerializer
 
-class LowStockAlertAPIView(generics.ListAPIView):
-    """API for Query #8: Items below threshold at a specific facility."""
-    serializer_class = InventoryAlertSerializer
+from django.db import connection
 
-    def get_queryset(self):
-        facility_id = self.kwargs['fac_id']
-        return Inventory.objects.filter(
-            place_id=facility_id, 
-            quantity__lt=F('threshold') # Pure Query 8 logic
-        ).select_related('item')
+@api_view(['GET'])
+def low_stock_alert(request, fac_id):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT i.name, inv.quantity, inv.threshold
+        FROM inventory inv
+        JOIN item i ON inv.item_id = i.id
+        WHERE inv.place_id = %s AND inv.quantity < inv.threshold
+    """, [fac_id])
+    
+    rows = cursor.fetchall()
+    data = [{"item": row[0], "quantity": row[1], "threshold": row[2]} for row in rows]
+    return Response(data)
 
-class NearExpiryAlertAPIView(generics.ListAPIView):
-    """API for Query #7: Items expiring within 30 days."""
-    serializer_class = InventoryAlertSerializer
-
-    def get_queryset(self):
-        facility_id = self.kwargs['fac_id']
-        thirty_days_from_now = timezone.now().date() + timedelta(days=30)
-        return Inventory.objects.filter(
-            place_id=facility_id,
-            expiry__lte=thirty_days_from_now # Pure Query 7 logic
-        ).select_related('item').order_by('expiry')
+@api_view(['GET'])
+def near_expiry_alert(request, fac_id):
+    cursor = connection.cursor()
+    thirty_days = date.today() + timedelta(days=30)
+    cursor.execute("""
+        SELECT i.name, inv.quantity, inv.expiry
+        FROM inventory inv
+        JOIN item i ON inv.item_id = i.id
+        WHERE inv.place_id = %s AND inv.expiry <= %s
+        ORDER BY inv.expiry
+    """, [fac_id, thirty_days])
+    
+    rows = cursor.fetchall()
+    data = [{"item": row[0], "quantity": row[1], "expiry": row[2]} for row in rows]
+    return Response(data)
     
 @api_view(['POST'])
 def manual_purchase(request):
-    SupplierOrder.objects.create(
-        supplier_id=request.data['supplier_id'],
-        destination_id=request.data['facility_id'],
-        item_id=request.data['item_id'],
-        quantity=request.data['quantity'],
-        order_date=date.today()
-    )
-
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO supplier_order (supplier_id, destination_id, item_id, quantity, order_date)
+        VALUES (%s, %s, %s, %s, %s)
+    """, [request.data['supplier_id'], request.data['facility_id'], request.data['item_id'], request.data['quantity'], date.today()])
     return Response({"status": "ordered"})
 
 def get_best_suppliers(item_id, required_qty):
-    listings = Listing.objects.filter(
-        item_id=item_id,
-        quantity__gt=0
-    ).order_by('price_per_item')
-
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT supplier_id, quantity, price_per_item
+        FROM listing 
+        WHERE item_id = %s AND quantity > 0
+        ORDER BY price_per_item ASC
+    """, [item_id])
+    
+    listings = cursor.fetchall()
     result = []
     remaining = required_qty
 
     for l in listings:
-        take = min(l.quantity, remaining)
+        supplier_id, l_qty, price = l
+        take = min(l_qty, remaining)
 
         result.append({
-            "supplier_id": l.supplier_id,
+            "supplier_id": supplier_id,
             "quantity": take,
-            "price": l.price_per_item
+            "price": price
         })
 
         remaining -= take
@@ -86,14 +95,12 @@ def auto_purchase(request):
 
     plan = get_best_suppliers(item_id, qty)
 
+    cursor = connection.cursor()
     for p in plan:
-        SupplierOrder.objects.create(
-            supplier_id=p['supplier_id'],
-            destination_id=destination,
-            item_id=item_id,
-            quantity=p['quantity'],
-            order_date=date.today()
-        )
+        cursor.execute("""
+            INSERT INTO supplier_order (supplier_id, destination_id, item_id, quantity, order_date)
+            VALUES (%s, %s, %s, %s, %s)
+        """, [p['supplier_id'], destination, item_id, p['quantity'], date.today()])
 
     return Response({"status": "auto-ordered"})
 
@@ -103,21 +110,28 @@ def request_from_warehouse(request):
     qty = request.data['quantity']
     facility_id = request.data['facility_id']
 
-    stock = Inventory.objects.filter(
-        item_id=item_id,
-        place__warehouse__isnull=False
-    ).order_by('-quantity').first()
-
-    if stock and stock.quantity >= qty:
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT inv.id, inv.quantity, inv.place_id
+        FROM inventory inv
+        JOIN place p ON inv.place_id = p.id
+        JOIN warehouse w ON p.id = w.id
+        WHERE inv.item_id = %s
+        ORDER BY inv.quantity DESC
+        LIMIT 1
+    """, [item_id])
+    
+    row = cursor.fetchone()
+    if row and row[1] >= qty:
         # transfer
-        InventoryTransfer.objects.create(
-            from_id=stock.place_id,
-            to_id=facility_id,
-            date=date.today()
-        )
-
-        stock.quantity -= qty
-        stock.save()
+        cursor.execute("""
+            INSERT INTO inventory_transfer (from_id, to_id, date)
+            VALUES (%s, %s, %s)
+        """, [row[2], facility_id, date.today()])
+        
+        cursor.execute("""
+            UPDATE inventory SET quantity = quantity - %s WHERE id = %s
+        """, [qty, row[0]])
 
         return Response({"status": "fulfilled by warehouse"})
 

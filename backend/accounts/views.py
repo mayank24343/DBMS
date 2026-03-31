@@ -3,59 +3,163 @@ from rest_framework.response import Response
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 
-from accounts.models import User, HealthcareWorker, Place, HealthFacility, Warehouse, Works, Citizen, CitizenContact, HealthFacilityContact, SupplierContact, WarehouseContact
-from clinical.models import Citizen
-from inventory.models import Supplier
+from django.db import connection
+
+
+from django.db import connection
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
 
 @csrf_exempt
+
 @api_view(['POST'])
 def login_view(request):
-    identifier = request.data.get("identifier")
-    password = request.data.get("password")
-    role = request.data.get("role")
+    identifier = request.data.get('identifier')
+    password = request.data.get('password')
+    role = request.data.get('role')
 
-    if role == "citizen":
-        citizen = Citizen.objects.filter(
-            Q(user_id=identifier) | Q(aadhar_no=identifier)
-        ).select_related('user').first()
+    cursor = connection.cursor()
 
-        if not citizen:
-            return Response({"error": "Citizen not found"}, status=404)
+    try:
+        # ================= CITIZEN =================
+        if role == "citizen":
 
-        if citizen.user.password != password:
-            return Response({"error": "Invalid password"}, status=401)
+            cursor.execute("""
+                SELECT u.userid, u.password
+                FROM citizen c
+                JOIN users u ON c.citizen_id = u.userid
+                WHERE c.citizen_id = %s OR c.aadhar_no = %s
+            """, [identifier, identifier])
 
-        return Response({"role": "citizen", "citizen_id": citizen.user_id})
+            row = cursor.fetchone()
 
-    return Response({"error": "Invalid role"}, status=400)
+            if not row:
+                return Response({"error": "Citizen not found"}, status=400)
+
+            user_id, db_password = row
+
+            if db_password != password:
+                return Response({"error": "Incorrect password"}, status=400)
+
+            return Response({
+                "role": "citizen",
+                "citizen_id": user_id
+            })
+
+        # ================= WORKER =================
+        elif role == "worker":
+
+            cursor.execute("""
+                SELECT u.userid, u.password, w.fac_id
+                FROM healthcareworker hw
+                JOIN users u ON hw.id = u.userid
+                LEFT JOIN works w ON hw.id = w.worker_id AND w.end_date IS NULL
+                WHERE hw.id = %s
+            """, [identifier])
+
+            row = cursor.fetchone()
+
+            if not row:
+                return Response({"error": "Worker not found"}, status=400)
+
+            user_id, db_password, fac_id = row
+
+            if db_password != password:
+                return Response({"error": "Incorrect password"}, status=400)
+
+            return Response({
+                "role": "worker",
+                "worker_id": user_id,
+                "facility_id": fac_id
+            })
+
+        # ================= SUPPLIER =================
+        elif role == "supplier":
+
+            cursor.execute("""
+                SELECT u.userid, u.password
+                FROM supplier s
+                JOIN users u ON s.id = u.userid
+                WHERE s.id = %s
+            """, [identifier])
+
+            row = cursor.fetchone()
+
+            if not row:
+                return Response({"error": "Supplier not found"}, status=400)
+
+            user_id, db_password = row
+
+            if db_password != password:
+                return Response({"error": "Incorrect password"}, status=400)
+
+            return Response({
+                "role": "supplier",
+                "supplier_id": user_id
+            })
+
+        # ================= ADMIN =================
+        elif role == "admin":
+
+            cursor.execute("""
+                SELECT id, password
+                FROM users
+                WHERE id = %s AND role = 'ADMIN'
+            """, [identifier])
+
+            row = cursor.fetchone()
+
+            if not row:
+                return Response({"error": "Admin not found"}, status=400)
+
+            user_id, db_password = row
+
+            if db_password != password:
+                return Response({"error": "Incorrect password"}, status=400)
+
+            return Response({"role": "admin"})
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
 
 def create_user(password, role):
-    user = User.objects.create(
-        password=password,
-        role=role
-    )
-    return user
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        INSERT INTO users (password, role)
+        VALUES (%s, %s)
+    """, [password, role])
+
+    return cursor.lastrowid
 
 @api_view(['POST'])
 def add_citizen(request):
-    user = create_user(request.data['password'], "CITIZEN")
+    cursor = connection.cursor()
 
-    citizen = Citizen.objects.create(
-        user=user,
-        aadhar_no=request.data['aadhar_no'],
-        name=request.data['name'],
-        dob=request.data['dob'],
-        sex=request.data['sex'],
-        addr_l1=request.data['addr_l1'],
-        city=request.data['city'],
-        state=request.data['state'],
-        postal_code=request.data['postal_code'],
-        latitude=request.data['latitude'],
-        longitude=request.data['longitude']
-    )
+    user_id = create_user(request.data['password'], "CITIZEN")
 
-    return Response({"citizen_id": citizen.user_id})
+    cursor.execute("""
+        INSERT INTO citizen (
+            citizen_id, aadhar_no, name, dob, sex,
+            addr_l1, city, state, postal_code, latitude, longitude
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """, [
+        user_id,
+        request.data['aadhar_no'],
+        request.data['name'],
+        request.data['dob'],
+        request.data['sex'],
+        request.data['addr_l1'],
+        request.data['city'],
+        request.data['state'],
+        request.data['postal_code'],
+        request.data['latitude'],
+        request.data['longitude']
+    ])
+
+    return Response({"citizen_id": user_id})
 
 @api_view(['POST'])
 def add_citizen_contact(request):
@@ -66,237 +170,271 @@ def add_citizen_contact(request):
     if not email and not phone:
         return Response({"error": "Provide email or phone"}, status=400)
 
-    contact = CitizenContact.objects.create(
-        citizen_id=citizen_id,
-        email=email,
-        phone=phone,
-        is_primary=request.data.get('is_primary', False)
-    )
-
-    return Response({"id": contact.id})
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO citizen_contact (citizen_id, email, phone, is_primary)
+        VALUES (%s, %s, %s, %s)
+    """, [citizen_id, email, phone, request.data.get('is_primary', False)])
+    
+    contact_id = cursor.lastrowid
+    return Response({"id": contact_id})
 
 @api_view(['DELETE'])
 def delete_citizen(request, id):
-    Citizen.objects.filter(user_id=id).delete()
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM citizen WHERE citizen_id = %s", [id])
     return Response({"status": "deleted"})
 
 @api_view(['POST'])
 def add_worker(request):
-    user = create_user(request.data['password'], "WORKER")
+    cursor = connection.cursor()
 
-    worker = HealthcareWorker.objects.create(
-        user=user,
-        name=request.data['name'],
-        role=request.data['role']
-    )
+    user_id = create_user(request.data['password'], "WORKER")
 
-    return Response({"worker_id": worker.user_id})
+    cursor.execute("""
+        INSERT INTO healthcareworker (id, name, role)
+        VALUES (%s, %s, %s)
+    """, [user_id, request.data['name'], request.data['role']])
+
+    return Response({"worker_id": user_id})
 
 @api_view(['DELETE'])
 def delete_worker(request, id):
-    HealthcareWorker.objects.filter(user_id=id).delete()
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM healthcareworker WHERE id = %s", [id])
     return Response({"status": "deleted"})
 
 @api_view(['POST'])
 def add_supplier(request):
-    user = create_user(request.data['password'], "SUPPLIER")
+    cursor = connection.cursor()
 
-    supplier = Supplier.objects.create(
-        user=user,
-        name=request.data['name'],
-        addr_l1=request.data['addr_l1'],
-        city=request.data['city'],
-        state=request.data['state'],
-        postal_code=request.data['postal_code'],
-        latitude=request.data['latitude'],
-        longitude=request.data['longitude']
-    )
+    user_id = create_user(request.data['password'], "SUPPLIER")
 
-    return Response({"supplier_id": supplier.user_id})
+    cursor.execute("""
+        INSERT INTO supplier (
+            id, name, addr_l1, city, state,
+            postal_code, latitude, longitude
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    """, [
+        user_id,
+        request.data['name'],
+        request.data['addr_l1'],
+        request.data['city'],
+        request.data['state'],
+        request.data['postal_code'],
+        request.data['latitude'],
+        request.data['longitude']
+    ])
+
+    return Response({"supplier_id": user_id})
 
 @api_view(['POST'])
 def add_supplier_contact(request):
-    contact = SupplierContact.objects.create(
-        supplier_id=request.data['supplier_id'],
-        email=request.data.get('email'),
-        phone=request.data.get('phone'),
-        is_primary=request.data.get('is_primary', False)
-    )
-
-    return Response({"id": contact.id})
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO supplier_contact (supplier_id, email, phone, is_primary)
+        VALUES (%s, %s, %s, %s)
+    """, [request.data['supplier_id'], request.data.get('email'), request.data.get('phone'), request.data.get('is_primary', False)])
+    
+    contact_id = cursor.lastrowid
+    return Response({"id": contact_id})
 
 @api_view(['POST'])
 def add_facility(request):
-    place = Place.objects.create(
-        addr_l1=request.data['addr_l1'],
-        city=request.data['city'],
-        state=request.data['state'],
-        postal_code=request.data['postal_code'],
-        latitude=request.data['latitude'],
-        longitude=request.data['longitude']
-    )
-
-    facility = HealthFacility.objects.create(
-        place=place,
-        name=request.data['name'],
-        type=request.data['type']
-    )
-
-    return Response({"facility_id": facility.place_id})
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO place (addr_l1, addr_l2, city, state, postal_code, latitude, longitude)
+        VALUES (%s, NULL, %s, %s, %s, %s, %s)
+    """, [request.data['addr_l1'], request.data['city'], request.data['state'], request.data['postal_code'], request.data['latitude'], request.data['longitude']])
+    
+    place_id = cursor.lastrowid
+    cursor.execute("""
+        INSERT INTO health_facility (id, name, type)
+        VALUES (%s, %s, %s)
+    """, [place_id, request.data['name'], request.data['type']])
+    
+    return Response({"facility_id": place_id})
 
 @api_view(['POST'])
 def add_facility_contact(request):
-    contact = HealthFacilityContact.objects.create(
-        healthfac_id=request.data['facility_id'],
-        email=request.data.get('email'),
-        phone=request.data.get('phone'),
-        is_primary=request.data.get('is_primary', False)
-    )
-
-    return Response({"id": contact.id})
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO healthfac_contact (healthfac_id, email, phone, is_primary)
+        VALUES (%s, %s, %s, %s)
+    """, [request.data['facility_id'], request.data.get('email'), request.data.get('phone'), request.data.get('is_primary', False)])
+    
+    contact_id = cursor.lastrowid
+    return Response({"id": contact_id})
 
 @api_view(['POST'])
 def add_warehouse(request):
-    place = Place.objects.create(
-        addr_l1=request.data['addr_l1'],
-        city=request.data['city'],
-        state=request.data['state'],
-        postal_code=request.data['postal_code'],
-        latitude=request.data['latitude'],
-        longitude=request.data['longitude']
-    )
-
-    Warehouse.objects.create(place=place)
-
-    return Response({"warehouse_id": place.id})
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO place (addr_l1, addr_l2, city, state, postal_code, latitude, longitude)
+        VALUES (%s, NULL, %s, %s, %s, %s, %s)
+    """, [request.data['addr_l1'], request.data['city'], request.data['state'], request.data['postal_code'], request.data['latitude'], request.data['longitude']])
+    
+    place_id = cursor.lastrowid
+    cursor.execute("INSERT INTO warehouse (id) VALUES (%s)", [place_id])
+    
+    return Response({"warehouse_id": place_id})
 
 @api_view(['POST'])
 def add_warehouse_contact(request):
-    contact = WarehouseContact.objects.create(
-        wh_id=request.data['warehouse_id'],
-        email=request.data.get('email'),
-        phone=request.data.get('phone'),
-        is_primary=request.data.get('is_primary', False)
-    )
-
-    return Response({"id": contact.id})
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO warehouse_contact (wh_id, email, phone, is_primary)
+        VALUES (%s, %s, %s, %s)
+    """, [request.data['warehouse_id'], request.data.get('email'), request.data.get('phone'), request.data.get('is_primary', False)])
+    
+    contact_id = cursor.lastrowid
+    return Response({"id": contact_id})
 
 @api_view(['POST'])
 def assign_worker(request):
-    Works.objects.create(
-        worker_id=request.data['worker_id'],
-        fac_id=request.data['facility_id'],
-        start_date=request.data['start_date']
-    )
-
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO works (worker_id, fac_id, start_date)
+        VALUES (%s, %s, %s)
+    """, [request.data['worker_id'], request.data['facility_id'], request.data['start_date']])
     return Response({"status": "assigned"})
 
 @api_view(['GET'])
 def get_facility_workers(request, fac_id):
-    workers = Works.objects.select_related('worker') \
-        .filter(facility_id=fac_id, end_date__isnull=True)
-
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT w.worker_id, hw.id as user_id, hw.name, hw.role
+        FROM works w
+        JOIN healthcareworker hw ON w.worker_id = hw.id
+        WHERE w.fac_id = %s AND w.end_date IS NULL
+    """, [fac_id])
+    
+    rows = cursor.fetchall()
     data = [
         {
-            "worker_id": w.worker.user_id,
-            "name": w.worker.name,
-            "role": w.worker.role
+            "worker_id": row[1],
+            "name": row[2],
+            "role": row[3]
         }
-        for w in workers
+        for row in rows
     ]
-
     return Response(data)
 
 @api_view(['POST'])
 def unassign_worker(request):
-    Works.objects.filter(
-        worker_id=request.data['worker_id'],
-        fac_id=request.data['facility_id'],
-        end_date__isnull=True
-    ).update(end_date=request.data['end_date'])
-
+    cursor = connection.cursor()
+    cursor.execute("""
+        UPDATE works 
+        SET end_date = %s 
+        WHERE worker_id = %s AND fac_id = %s AND end_date IS NULL
+    """, [request.data['end_date'], request.data['worker_id'], request.data['facility_id']])
     return Response({"status": "unassigned"})
 
 @api_view(['GET'])
 def get_citizen_contacts(request, citizen_id):
-    contacts = CitizenContact.objects.filter(citizen_id=citizen_id)
-
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT id, email, phone, is_primary
+        FROM citizen_contact 
+        WHERE citizen_id = %s
+    """, [citizen_id])
+    
+    rows = cursor.fetchall()
     data = [
         {
-            "id": c.id,
-            "email": c.email,
-            "phone": c.phone,
-            "is_primary": c.is_primary
+            "id": row[0],
+            "email": row[1],
+            "phone": row[2],
+            "is_primary": row[3]
         }
-        for c in contacts
+        for row in rows
     ]
-
     return Response(data)
 
 @api_view(['DELETE'])
 def delete_citizen_contact(request, id):
-    CitizenContact.objects.filter(id=id).delete()
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM citizen_contact WHERE id = %s", [id])
     return Response({"status": "deleted"})
 
 @api_view(['GET'])
 def get_facility_contacts(request, facility_id):
-    contacts = HealthFacilityContact.objects.filter(healthfac_id=facility_id)
-
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT id, email, phone, is_primary
+        FROM healthfac_contact 
+        WHERE healthfac_id = %s
+    """, [facility_id])
+    
+    rows = cursor.fetchall()
     data = [
         {
-            "id": c.id,
-            "email": c.email,
-            "phone": c.phone,
-            "is_primary": c.is_primary
+            "id": row[0],
+            "email": row[1],
+            "phone": row[2],
+            "is_primary": row[3]
         }
-        for c in contacts
+        for row in rows
     ]
-
     return Response(data)
 
 @api_view(['DELETE'])
 def delete_facility_contact(request, id):
-    HealthFacilityContact.objects.filter(id=id).delete()
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM healthfac_contact WHERE id = %s", [id])
     return Response({"status": "deleted"})
 
 @api_view(['GET'])
 def get_warehouse_contacts(request, warehouse_id):
-    contacts = WarehouseContact.objects.filter(wh_id=warehouse_id)
-
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT id, email, phone, is_primary
+        FROM warehouse_contact 
+        WHERE wh_id = %s
+    """, [warehouse_id])
+    
+    rows = cursor.fetchall()
     data = [
         {
-            "id": c.id,
-            "email": c.email,
-            "phone": c.phone,
-            "is_primary": c.is_primary
+            "id": row[0],
+            "email": row[1],
+            "phone": row[2],
+            "is_primary": row[3]
         }
-        for c in contacts
+        for row in rows
     ]
-
     return Response(data)
 
 @api_view(['DELETE'])
 def delete_warehouse_contact(request, id):
-    WarehouseContact.objects.filter(id=id).delete()
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM warehouse_contact WHERE id = %s", [id])
     return Response({"status": "deleted"})
 
 @api_view(['GET'])
 def get_supplier_contacts(request, facility_id):
-    contacts = SupplierContact.objects.filter(healthfac_id=facility_id)
-
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT id, email, phone, is_primary
+        FROM supplier_contact 
+        WHERE supplier_id = %s
+    """, [facility_id])
+    
+    rows = cursor.fetchall()
     data = [
         {
-            "id": c.id,
-            "email": c.email,
-            "phone": c.phone,
-            "is_primary": c.is_primary
+            "id": row[0],
+            "email": row[1],
+            "phone": row[2],
+            "is_primary": row[3]
         }
-        for c in contacts
+        for row in rows
     ]
-
     return Response(data)
 
 @api_view(['DELETE'])
 def delete_supplier_contact(request, id):
-    SupplierContact.objects.filter(id=id).delete()
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM supplier_contact WHERE id = %s", [id])
     return Response({"status": "deleted"})

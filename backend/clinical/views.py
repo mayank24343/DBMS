@@ -1,206 +1,254 @@
 # backend/clinical/views.py
 
 # --- Django & DRF Imports ---
-from rest_framework import generics
-from rest_framework.exceptions import NotFound
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from django.db.models import Count, Avg, F
-from django.db.models.functions import ExtractMonth
+from django.db import connection
+from datetime import date
 
-# --- Local App Imports ---
-from .models import Vaccination, Visit, Citizen, Diagnosis, Disease, LabOrder, Prescription, VaccPrereqAge, VaccPrereqDose
-from inventory.models import Item
-from .serializers import (
-    MedicalHistorySerializer, 
-    VisitFullDetailSerializer,
-    DiseaseCaseSerializer, 
-    MonthlyTrendSerializer
-)
+from django.db import connection
+from datetime import date
 
 @api_view(['GET'])
 def medical_history(request, citizen_id):
-    visits = Visit.objects.filter(citizen_id=citizen_id) \
-        .select_related('centre') \
-        .prefetch_related('diagnoses__disease') \
-        .order_by('-visit_date')
-
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT v.id, v.visit_date, hf.name, v.reason
+        FROM visit v
+        LEFT JOIN health_facility hf ON v.centre_id = hf.id
+        WHERE v.citizen_id = %s
+        ORDER BY v.visit_date DESC
+    """, [citizen_id])
+    
+    rows = cursor.fetchall()
     data = []
-    for v in visits:
+    for row in rows:
         data.append({
-            "id": v.id,
-            "visit_date": v.visit_date,
-            "facility": v.centre.name,
-            "reason": v.reason,
-            "diagnoses": [
-                {
-                    "disease": d.disease.name if d.disease else None,
-                    "description": d.description
-                } for d in v.diagnoses.all()
-            ]
+            "id": row[0],
+            "visit_date": row[1],
+            "facility": row[2],
+            "reason": row[3],
+            "diagnoses": []
         })
-
     return Response(data)
 
 @api_view(['GET'])
 def lab_reports(request, citizen_id):
-    reports = LabOrder.objects.filter(
-        visit__citizen_id=citizen_id
-    ).select_related('test').prefetch_related('results')
-
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT lt.name, lo.order_date, lr.result, lr.result_date
+        FROM lab_order lo
+        JOIN lab_test lt ON lo.test_id = lt.id
+        LEFT JOIN lab_result lr ON lo.id = lr.order_id
+        JOIN visit v ON lo.visit_id = v.id
+        WHERE v.citizen_id = %s
+    """, [citizen_id])
+    
+    rows = cursor.fetchall()
     data = []
-    for r in reports:
-        result = r.results.first()
-
+    for row in rows:
+        status = "Completed" if row[2] else "Pending"
         data.append({
-            "test": r.test.name,
-            "order_date": r.order_date,
-            "status": "Completed" if result else "Pending",
-            "result": result.result if result else None,
-            "result_date": result.result_date if result else None
+            "test": row[0],
+            "order_date": row[1],
+            "status": status,
+            "result": row[2],
+            "result_date": row[3]
         })
-
     return Response(data)
 
 @api_view(['GET'])
 def vaccination_history(request, citizen_id):
-    vaccinations = Vaccination.objects.filter(
-        citizen_id=citizen_id
-    ).select_related('vaccine', 'centre') \
-     .order_by('-vaccination_date')
-
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT i.name, vacc.vaccination_date, vacc.dose_no, hf.name
+        FROM vaccination vacc
+        JOIN item i ON vacc.vaccine_id = i.id
+        LEFT JOIN health_facility hf ON vacc.centre_id = hf.id
+        WHERE vacc.citizen_id = %s
+        ORDER BY vacc.vaccination_date DESC
+    """, [citizen_id])
+    
+    rows = cursor.fetchall()
     data = [
         {
-            "vaccine": v.vaccine.name,
-            "date": v.vaccination_date,
-            "dose": v.dose_no,
-            "centre": v.centre.name
-        }
-        for v in vaccinations
+            "vaccine": row[0],
+            "date": row[1],
+            "dose": row[2],
+            "centre": row[3]
+        } for row in rows
     ]
-
     return Response(data)
-
-from datetime import date
 
 @api_view(['GET'])
 def eligible_vaccines(request, citizen_id):
-    citizen = Citizen.objects.get(pk=citizen_id)
-
-    age = date.today().year - citizen.dob.year
-
-    taken = Vaccination.objects.filter(
-        citizen_id=citizen_id
-    ).values_list('vaccine_id', flat=True)
-
-    vaccines = Item.objects.filter(
-        type='vaccine',
-        vaccprereqage__age_limit__lte=age
-    ).exclude(id__in=taken).distinct()
-
-    data = [{"id": v.id, "name": v.name} for v in vaccines]
-
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT c.dob FROM citizen c WHERE c.citizen_id = %s
+    """, [citizen_id])
+    
+    row = cursor.fetchone()
+    if not row:
+        return Response({"error": "Citizen not found"}, status=404)
+    
+    dob = row[0]
+    age = date.today().year - dob.year
+    
+    cursor.execute("""
+        SELECT DISTINCT i.id, i.name
+        FROM item i
+        JOIN vacc_prereq_age vpa ON i.id = vpa.vaccine_id
+        WHERE i.type = 'vaccine' AND vpa.age_limit <= %s
+        AND i.id NOT IN (
+            SELECT v.vaccine_id FROM vaccination v WHERE v.citizen_id = %s
+        )
+    """, [age, citizen_id])
+    
+    rows = cursor.fetchall()
+    data = [{"id": row[0], "name": row[1]} for row in rows]
     return Response(data)
 
 @api_view(['GET'])
 def visit_detail(request, id):
-    visit = Visit.objects.select_related('centre').get(id=id)
-
+    cursor = connection.cursor()
+    
+    # base visit
+    cursor.execute("""
+        SELECT v.visit_date, hf.name, v.reason
+        FROM visit v
+        LEFT JOIN health_facility hf ON v.centre_id = hf.id
+        WHERE v.id = %s
+    """, [id])
+    row = cursor.fetchone()
+    if not row:
+        return Response({"error": "Visit not found"}, status=404)
+    
     data = {
-        "visit_date": visit.visit_date,
-        "facility": visit.centre.name,
-        "reason": visit.reason,
-
-        "diagnosis": [
-            d.disease.name for d in visit.diagnoses.all()
-        ],
-
-        "prescriptions": [
-            {
-                "item": p.item.name,
-                "dosage": p.dosage,
-                "frequency": p.frequency
-            } for p in visit.prescriptions.all()
-        ],
-
-        "lab_tests": [
-            {
-                "test": o.test.name,
-                "result": o.results.first().result if o.results.exists() else None
-            } for o in visit.lab_orders.all()
-        ],
-
-        "procedures": [
-            p.procedure.name for p in visit.procedures.all()
-        ]
+        "visit_date": row[0],
+        "facility": row[1],
+        "reason": row[2],
+        "diagnosis": [],
+        "prescriptions": [],
+        "lab_tests": [],
+        "procedures": []
     }
-
+    
+    # diagnoses
+    cursor.execute("""
+        SELECT d.name
+        FROM diagnosis dg
+        JOIN disease d ON dg.disease_id = d.id
+        WHERE dg.visit_id = %s
+    """, [id])
+    data["diagnosis"] = [row[0] for row in cursor.fetchall()]
+    
+    # prescriptions
+    cursor.execute("""
+        SELECT i.name, p.dosage, p.frequency
+        FROM prescription p
+        JOIN item i ON p.item_id = i.id
+        WHERE p.visit_id = %s
+    """, [id])
+    data["prescriptions"] = [{"item": row[0], "dosage": row[1], "frequency": row[2]} for row in cursor.fetchall()]
+    
+    # lab tests
+    cursor.execute("""
+        SELECT lt.name, lr.result
+        FROM lab_order lo
+        JOIN lab_test lt ON lo.test_id = lt.id
+        LEFT JOIN lab_result lr ON lo.id = lr.order_id
+        WHERE lo.visit_id = %s
+    """, [id])
+    data["lab_tests"] = [{"test": row[0], "result": row[1] if row[1] else None} for row in cursor.fetchall()]
+    
+    # procedures
+    cursor.execute("""
+        SELECT mp.name
+        FROM procedure_taken pt
+        JOIN medical_procedure mp ON pt.procedure_id = mp.procedure_id
+        WHERE pt.visit_id = %s
+    """, [id])
+    data["procedures"] = [row[0] for row in cursor.fetchall()]
+    
     return Response(data)
 
 @api_view(['POST'])
 def book_appointment(request):
-    visit = Visit.objects.create(
-        citizen_id=request.data['citizen_id'],
-        centre_id=request.data['facility_id'],
-        visit_date=request.data['date'],
-        reason=request.data.get('reason')
-    )
-
-    return Response({"visit_id": visit.id})
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO visit (citizen_id, centre_id, visit_date, reason)
+        VALUES (%s, %s, %s, %s)
+    """, [request.data['citizen_id'], request.data['facility_id'], request.data['date'], request.data.get('reason', '')])
+    
+    visit_id = cursor.lastrowid
+    return Response({"visit_id": visit_id})
 
 @api_view(['GET'])
 def search_facilities(request):
     query = request.GET.get('q', '')
     type_ = request.GET.get('type')
 
+    cursor = connection.cursor()
+    
     if type_ == 'medicine':
-        facilities = HealthFacility.objects.filter(
-            inventory__item__name__icontains=query
-        )
-
+        cursor.execute("""
+            SELECT DISTINCT hf.id, hf.name
+            FROM health_facility hf
+            JOIN place p ON hf.id = p.id
+            JOIN inventory inv ON p.id = inv.place_id
+            JOIN item i ON inv.item_id = i.id
+            WHERE i.name ILIKE %s
+        """, [f'%{query}%'])
+    
     elif type_ == 'lab':
-        facilities = HealthFacility.objects.filter(
-            labtestprovided__test__name__icontains=query
-        )
-
+        cursor.execute("""
+            SELECT DISTINCT hf.id, hf.name
+            FROM health_facility hf
+            JOIN lab_test_provided ltp ON hf.id = ltp.fac_id
+            JOIN lab_test lt ON ltp.test_id = lt.id
+            WHERE lt.name ILIKE %s
+        """, [f'%{query}%'])
+    
     elif type_ == 'procedure':
-        facilities = HealthFacility.objects.filter(
-            procedureprovided__procedure__name__icontains=query
-        )
-
+        cursor.execute("""
+            SELECT DISTINCT hf.id, hf.name
+            FROM health_facility hf
+            JOIN procedure_provided pp ON hf.id = pp.fac_id
+            JOIN medical_procedure mp ON pp.procedure_id = mp.procedure_id
+            WHERE mp.name ILIKE %s
+        """, [f'%{query}%'])
+    
     else:
         return Response({"error": "Invalid type"}, status=400)
 
-    data = [{"id": f.id, "name": f.name} for f in facilities.distinct()]
-
+    rows = cursor.fetchall()
+    data = [{"id": row[0], "name": row[1]} for row in rows]
     return Response(data)
-
-from django.db.models import Sum, F
 
 @api_view(['GET'])
 def available_facilities(request):
     state = request.GET.get('state')
     city = request.GET.get('city')
 
-    facilities = HealthFacility.objects.filter(
-        place__state=state,
-        place__city=city
-    ).annotate(
-        total=Sum('ward__total'),
-        occupied=Sum('ward__occupied')
-    ).annotate(
-        vacant=F('total') - F('occupied')
-    ).filter(vacant__gt=0)
-
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT hf.id, hf.name, (COALESCE(SUM(w.total), 0) - COALESCE(SUM(w.occupied), 0)) as vacant_beds
+        FROM health_facility hf
+        JOIN place p ON hf.id = p.id
+        LEFT JOIN wards w ON hf.id = w.facility_id
+        WHERE p.state = %s AND p.city = %s
+        GROUP BY hf.id, hf.name
+        HAVING (COALESCE(SUM(w.total), 0) - COALESCE(SUM(w.occupied), 0)) > 0
+    """, [state, city])
+    
+    rows = cursor.fetchall()
     data = [
         {
-            "id": f.id,
-            "name": f.name,
-            "vacant_beds": f.vacant
-        }
-        for f in facilities
+            "id": row[0],
+            "name": row[1],
+            "vacant_beds": row[2]
+        } for row in rows
     ]
-
     return Response(data)
 
 # ==========================================
@@ -209,9 +257,7 @@ def available_facilities(request):
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from facilities.models import HealthFacility
-from clinical.models import LabTestProvided, ProcedureProvided
-from inventory.models import Inventory
+
 
 @api_view(['GET'])
 def search_directory(request):
@@ -264,73 +310,72 @@ def search_directory(request):
 @api_view(['POST'])
 def book_appointment(request):
     data = request.data
-    try:
-        # 1. Verify the citizen
-        citizen = Citizen.objects.get(aadhar_no=data['aadhar_no'])
-        
-        # 2. Create the future Visit record
-        # We prepend "APPOINTMENT:" to the reason so doctors know it's scheduled
-        visit = Visit.objects.create(
-            citizen=citizen,
-            centre_id=data['facility_id'],
-            visit_date=data['appointment_date'],
-            reason=f"APPOINTMENT: {data['reason']}"
-        )
-        
-        return Response({"message": "Appointment booked successfully!", "visit_id": visit.id}, status=201)
-        
-    except Citizen.DoesNotExist:
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT citizen_id FROM citizen WHERE aadhar_no = %s
+    """, [data['aadhar_no']])
+    row = cursor.fetchone()
+    if not row:
         return Response({"error": "Citizen not found."}, status=404)
-    except Exception as e:
-        return Response({"error": str(e)}, status=400)
+    
+    citizen_id = row[0]
+    cursor.execute("""
+        INSERT INTO visit (citizen_id, centre_id, visit_date, reason)
+        VALUES (%s, %s, %s, %s)
+    """, [citizen_id, data['facility_id'], data['appointment_date'], f"APPOINTMENT: {data['reason']}"])
+    
+    visit_id = cursor.lastrowid
+    return Response({"message": "Appointment booked successfully!", "visit_id": visit_id}, status=201)
 
 @api_view(['POST'])
 def create_visit_with_diagnosis(request):
     data = request.data
-    try:
-        # 1. Find the citizen by Aadhar
-        citizen = Citizen.objects.get(aadhar_no=data['aadhar_no'])
-        
-        # 2. Create the Visit record
-        visit = Visit.objects.create(
-            citizen=citizen,
-            centre_id=data['facility_id'],
-            visit_date=data['visit_date'],
-            reason=data['reason']
-        )
-        
-        # 3. If a disease was selected, create the Diagnosis record
-        if data.get('disease_id'):
-            Diagnosis.objects.create(
-                visit=visit,
-                disease_id=data['disease_id'],
-                description=data.get('description', '')
-            )
-            
-        return Response({"message": "Success!", "visit_id": visit.id}, status=201)
-        
-    except Citizen.DoesNotExist:
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT citizen_id FROM citizen WHERE aadhar_no = %s
+    """, [data['aadhar_no']])
+    row = cursor.fetchone()
+    if not row:
         return Response({"error": "Citizen not found. Check Aadhar number."}, status=404)
-    except Exception as e:
-        return Response({"error": str(e)}, status=400)
+    
+    citizen_id = row[0]
+    cursor.execute("""
+        INSERT INTO visit (citizen_id, centre_id, visit_date, reason)
+        VALUES (%s, %s, %s, %s)
+    """, [citizen_id, data['facility_id'], data['visit_date'], data['reason']])
+    
+    visit_id = cursor.lastrowid
+    
+    if data.get('disease_id'):
+        cursor.execute("""
+            INSERT INTO diagnosis (visit_id, disease_id, description)
+            VALUES (%s, %s, %s)
+        """, [visit_id, data['disease_id'], data.get('description', '')])
+    
+    return Response({"message": "Success!", "visit_id": visit_id}, status=201)
     
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from facilities.models import HealthFacility
+
 
 @api_view(['GET'])
 def get_facilities(request):
-    facilities = HealthFacility.objects.select_related('place').all()
-
-    data = []
-    for f in facilities:
-        data.append({
-            "id": f.place_id,
-            "name": f.name,
-            "type": f.type,
-            "city": f.place.city
-        })
-
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT hf.id, hf.name, hf.type, p.city
+        FROM health_facility hf
+        JOIN place p ON hf.id = p.id
+    """)
+    
+    rows = cursor.fetchall()
+    data = [
+        {
+            "id": row[0],
+            "name": row[1],
+            "type": row[2],
+            "city": row[3]
+        } for row in rows
+    ]
     return Response(data)
 
 # ==========================================
@@ -339,119 +384,94 @@ def get_facilities(request):
 
 @api_view(['GET'])
 def vaccination_history(request, citizen_id):
-    data = Vaccination.objects.select_related('vaccine', 'centre') \
-        .filter(citizen_id=citizen_id) \
-        .order_by('-vaccination_date')
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT i.name, vacc.vaccination_date, vacc.dose_no, hf.name
+        FROM vaccination vacc
+        JOIN item i ON vacc.vaccine_id = i.id
+        LEFT JOIN health_facility hf ON vacc.centre_id = hf.id
+        WHERE vacc.citizen_id = %s
+        ORDER BY vacc.vaccination_date DESC
+    """, [citizen_id])
+    
+    rows = cursor.fetchall()
+    data = [
+        {
+            "vaccine": row[0],
+            "date": row[1],
+            "dose": row[2],
+            "centre": row[3]
+        } for row in rows
+    ]
+    return Response(data)
 
-    result = []
-    for v in data:
-        result.append({
-            "vaccine": v.vaccine.name,
-            "date": v.vaccination_date,
-            "dose": v.dose_no,
-            "centre": v.centre.name
-        })
+@api_view(['GET'])
+def citizen_medical_history(request, aadhar_no):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT v.id, v.visit_date, hf.name, v.reason
+        FROM visit v
+        JOIN citizen c ON v.citizen_id = c.citizen_id
+        LEFT JOIN health_facility hf ON v.centre_id = hf.id
+        WHERE c.aadhar_no = %s
+        ORDER BY v.visit_date DESC
+    """, [aadhar_no])
+    
+    rows = cursor.fetchall()
+    data = [{"id": row[0], "visit_date": row[1], "facility": row[2], "reason": row[3], "diagnoses": []} for row in rows]
+    return Response(data)
 
-    return Response(result)
-
-class CitizenMedicalHistoryAPIView(generics.ListAPIView):
-    serializer_class = MedicalHistorySerializer
-
-    def get_queryset(self):
-        aadhar = self.kwargs.get('aadhar_no')
-        try:
-            citizen = Citizen.objects.get(aadhar_no=aadhar)
-        except Citizen.DoesNotExist:
-            raise NotFound("Citizen with this Aadhar number not found.")
-
-        return Visit.objects.filter(citizen=citizen)\
-            .select_related('centre')\
-            .prefetch_related('diagnoses__disease')\
-            .order_by('-visit_date')
-
-class VisitDetailAPIView(generics.RetrieveAPIView):
-    """Retrieves complete details for one specific visit ID."""
-    queryset = Visit.objects.all()
-    serializer_class = VisitFullDetailSerializer
-    lookup_field = 'id' 
-
-    def get_queryset(self):
-        return super().get_queryset().select_related(
-            'centre'
-        ).prefetch_related(
-            'diagnoses__disease',
-            'prescriptions__item',
-            'lab_orders__test',
-            'lab_orders__results',        # ✅ FIXED
-            'admission_set__ward__facility'
-        )
     
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from datetime import date
-from inventory.models import Item
-from clinical.models import Vaccination, Citizen  # adjust import if needed
 
 @api_view(['GET'])
 def eligible_vaccines(request, citizen_id):
-    try:
-        citizen = Citizen.objects.get(pk=citizen_id)
-
-        # 🔥 calculate age
-        today = date.today()
-        age = today.year - citizen.dob.year - (
-            (today.month, today.day) < (citizen.dob.month, citizen.dob.day)
-        )
-
-        # 🔥 vaccines already taken
-        taken_vaccine_ids = Vaccination.objects.filter(
-            citizen_id=citizen_id
-        ).values_list('vaccine_id', flat=True)
-
-        # 🔥 eligible vaccines
-        vaccines = Item.objects.filter(
-            type='vaccine',
-            vaccprereqage__age_limit__lte=age
-        ).exclude(
-            id__in=taken_vaccine_ids
-        ).distinct()
-
-        data = [
-            {
-                "id": v.id,
-                "name": v.name
-            }
-            for v in vaccines
-        ]
-
-        return Response(data)
-
-    except Citizen.DoesNotExist:
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT c.dob FROM citizen c WHERE c.citizen_id = %s
+    """, [citizen_id])
+    
+    row = cursor.fetchone()
+    if not row:
         return Response({"error": "Citizen not found"}, status=404)
+    
+    dob = row[0]
+    age = date.today().year - dob.year
+    
+    cursor.execute("""
+        SELECT DISTINCT i.id, i.name
+        FROM item i
+        JOIN vacc_prereq_age vpa ON i.id = vpa.vaccine_id
+        WHERE i.type = 'vaccine' AND vpa.age_limit <= %s
+        AND i.id NOT IN (
+            SELECT v.vaccine_id FROM vaccination v WHERE v.citizen_id = %s
+        )
+    """, [age, citizen_id])
+    
+    rows = cursor.fetchall()
+    data = [{"id": row[0], "name": row[1]} for row in rows]
+    return Response(data)
 
 # ==========================================
 # ANALYTICS & DASHBOARD (GET REQUESTS)
 # ==========================================
 
-class DiseaseGeographicStatsAPIView(generics.ListAPIView):
-    """API for Query #13: Cases of a disease by region."""
-    serializer_class = DiseaseCaseSerializer
+@api_view(['GET'])
+def disease_geographic_stats(request, disease_id):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT c.state, c.city, COUNT(*) as case_count
+        FROM diagnosis dg
+        JOIN visit v ON dg.visit_id = v.id
+        JOIN citizen c ON v.citizen_id = c.citizen_id
+        WHERE dg.disease_id = %s
+        GROUP BY c.state, c.city
+        ORDER BY case_count DESC
+    """, [disease_id])
+    
+    rows = cursor.fetchall()
+    data = [{"state": row[0], "city": row[1], "case_count": row[2]} for row in rows]
+    return Response(data)
 
-    def get_queryset(self):
-        disease_id = self.kwargs['disease_id']
-        return Diagnosis.objects.filter(disease_id=disease_id) \
-            .values(state=F('visit__citizen__state'), city=F('visit__citizen__city')) \
-            .annotate(case_count=Count('id')) \
-            .order_by('-case_count')
-
-class DiseaseMonthlyTrendAPIView(generics.ListAPIView):
-    """API for Query #15: Monthly average of a disease."""
-    serializer_class = MonthlyTrendSerializer
-
-    def get_queryset(self):
-        disease_id = self.kwargs['disease_id']
-        return Diagnosis.objects.filter(disease_id=disease_id) \
-            .annotate(month=ExtractMonth('visit__visit_date')) \
-            .values('month') \
-            .annotate(avg_daily_cases=Count('id', distinct=True) / Count('visit__visit_date', distinct=True)) \
-            .order_by('month')

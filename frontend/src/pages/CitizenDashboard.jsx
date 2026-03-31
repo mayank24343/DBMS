@@ -12,7 +12,8 @@ const CitizenDashboard = () => {
         { key: "history", label: "Medical History" },
         { key: "vaccination", label: "Vaccinations" },
         { key: "book", label: "Book Appointment" },
-        { key: "eligible", label: "Eligible Vaccines" }
+        { key: "eligible", label: "Eligible Vaccines" },
+        {key : "search", label: "Search Facilities"},
     ];
 
     return (
