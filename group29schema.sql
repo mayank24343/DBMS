@@ -109,6 +109,7 @@ CREATE TABLE healthcareworker (
 );
 
 CREATE TABLE works (
+	id SERIAL PRIMARY KEY,
 	worker_id BIGINT UNSIGNED,
 	fac_id BIGINT UNSIGNED, 
 	start_date DATE NOT NULL,
@@ -136,10 +137,10 @@ CREATE TABLE visit (
 );
 
 CREATE TABLE doctor_visit (
+	id SERIAL PRIMARY KEY,
     visit_id BIGINT UNSIGNED,
     doctor_id BIGINT UNSIGNED,
     role VARCHAR(50) NOT NULL,
-    PRIMARY KEY (visit_id, doctor_id),
 	FOREIGN KEY (visit_id) REFERENCES visit(id) ON DELETE CASCADE,
 	FOREIGN KEY (doctor_id) REFERENCES healthcareworker(id)
 );
@@ -215,17 +216,17 @@ CREATE TABLE lab_result (
 );
 
 CREATE TABLE lab_test_provided (
+	id SERIAL PRIMARY KEY,
 	test_id BIGINT UNSIGNED,
 	fac_id BIGINT UNSIGNED,
-	PRIMARY KEY(test_id,fac_id),
 	FOREIGN KEY (test_id) REFERENCES lab_test(id),
 	FOREIGN KEY (fac_id) REFERENCES health_facility(id)
 );
 
 CREATE TABLE procedure_provided (
+	id SERIAL PRIMARY KEY,
 	procedure_id BIGINT UNSIGNED,
 	fac_id BIGINT UNSIGNED,
-	PRIMARY KEY(procedure_id,fac_id),
 	FOREIGN KEY (fac_id) REFERENCES health_facility(id),
 	FOREIGN KEY (procedure_id) REFERENCES medical_procedure(procedure_id)
 );
