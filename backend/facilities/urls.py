@@ -30,6 +30,14 @@ from .views import (
     pending_lab_tests,
     all_lab_tests,
     submit_lab_result,
+
+    # patients + inventory
+    admitted_patients,
+    low_inventory,
+    # disease analytics
+    disease_geo,
+    disease_daily,
+    disease_monthly_avg
 )
 
 urlpatterns = [
@@ -65,5 +73,12 @@ urlpatterns = [
     path('lab/<int:lab_id>/all/', all_lab_tests, name='lab-all'),
     path('lab/result/', submit_lab_result, name='lab-submit'),
 
-    
+    # patients + inventory
+    path('facility/<int:fac_id>/patients/admitted/', admitted_patients),
+    path('facility/<int:fac_id>/inventory/low/', low_inventory),
+
+    # disease analytics
+    path('stats/disease/<int:disease_id>/geo/', disease_geo),
+    path('stats/disease/<int:disease_id>/day/', disease_daily),
+    path('stats/disease/<int:disease_id>/monthly/', disease_monthly_avg),
 ]

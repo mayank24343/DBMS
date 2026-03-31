@@ -186,6 +186,10 @@ def log_usage(request):
 
 @api_view(['POST'])
 def admit_patient(request):
+    ward = Ward.objects.get(id=request.data['ward_id'])
+    if ward.occupied >= ward.total:
+        return Response({"error": "Ward full"}, status=400)
+    
     Admission.objects.create(
         citizen_id=request.data['citizen_id'],
         visit_id=request.data['visit_id'],
@@ -203,13 +207,46 @@ def discharge_patient(request):
 
     return Response({"status": "discharged"})
 
+from datetime import date
+
 @api_view(['POST'])
 def transfer_patient(request):
+    visit_id = request.data['visit_id']
+    citizen_id = request.data['citizen_id']
+    from_fac = request.data['from_fac']
+    to_fac = request.data['to_fac']
+    new_ward_id = request.data['ward_id']  # 🔥 REQUIRED
+
+    # ================= 1. DISCHARGE FROM OLD =================
+    admission = Admission.objects.filter(
+        visit_id=visit_id,
+        discharge_date__isnull=True
+    ).first()
+
+    if admission:
+        admission.discharge_date = date.today()
+        admission.save()
+
+    # ================= 2. CHECK NEW WARD =================
+    new_ward = Ward.objects.get(id=new_ward_id)
+
+    if new_ward.occupied >= new_ward.total:
+        return Response({"error": "New ward full"}, status=400)
+
+    # ================= 3. CREATE NEW ADMISSION =================
+    Admission.objects.create(
+        citizen_id=citizen_id,
+        visit_id=visit_id,
+        ward_id=new_ward_id,
+        admission_date=date.today()
+    )
+
+    # ================= 4. LOG TRANSFER =================
     Transfer.objects.create(
-        visit_id=request.data['visit_id'],
-        citizen_id=request.data['citizen_id'],
-        from_fac=request.data['from_fac'],
-        to_fac=request.data['to_fac'],
+        visit_id=visit_id,
+        citizen_id=citizen_id,
+        from_fac=from_fac,
+        to_fac=to_fac,
         date_of_transfer=date.today(),
         reason=request.data.get('reason')
     )
@@ -297,3 +334,87 @@ def all_lab_tests(request, lab_id):
         })
 
     return Response(data)
+
+@api_view(['GET'])
+def admitted_patients(request, fac_id):
+    admissions = Admission.objects.filter(
+        ward__facility_id=fac_id,
+        discharge_date__isnull=True
+    ).select_related('citizen', 'ward')
+
+    return Response([
+        {
+            "citizen_id": a.citizen_id,
+            "name": a.citizen.name,
+            "ward": a.ward.type,
+            "admission_date": a.admission_date
+        }
+        for a in admissions
+    ])
+
+@api_view(['GET'])
+def low_inventory(request, fac_id):
+    items = Inventory.objects.filter(
+        place_id=fac_id,
+        quantity__lt=F('threshold')
+    ).select_related('item')
+
+    return Response([
+        {
+            "item": i.item.name,
+            "quantity": i.quantity,
+            "threshold": i.threshold
+        }
+        for i in items
+    ])
+
+from django.db.models import Count, F
+
+@api_view(['GET'])
+def disease_geo(request, disease_id):
+    data = Diagnosis.objects.filter(disease_id=disease_id) \
+        .values(
+            state=F('visit__citizen__state'),
+            city=F('visit__citizen__city')
+        ) \
+        .annotate(cases=Count('visit__citizen_id', distinct=True)) \
+        .order_by('-cases')
+
+    return Response(list(data))
+
+@api_view(['GET'])
+def disease_daily(request, disease_id):
+    date = request.GET.get('date')
+
+    count = Diagnosis.objects.filter(
+        disease_id=disease_id,
+        visit__visit_date=date
+    ).count()
+
+    return Response({
+        "date": date,
+        "cases": count
+    })
+
+from django.db.models.functions import ExtractMonth
+
+@api_view(['GET'])
+def disease_monthly_avg(request, disease_id):
+    data = Diagnosis.objects.filter(disease_id=disease_id) \
+        .annotate(month=ExtractMonth('visit__visit_date')) \
+        .values('month') \
+        .annotate(
+            total_cases=Count('id'),
+            days=Count('visit__visit_date', distinct=True)
+        )
+
+    result = [
+        {
+            "month": d['month'],
+            "avg_daily_cases": d['total_cases'] / d['days'] if d['days'] else 0
+        }
+        for d in data
+    ]
+
+    return Response(result)
+
