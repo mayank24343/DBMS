@@ -394,9 +394,9 @@ for i in range(10):
         nur[i*10+j] = []
         #give all procedures
         for k,(t,d,x) in enumerate(medical_procedures,1):
-            f.write(f"INSERT INTO procedure_provided VALUES ({k},{i*10+j});\n")
+            f.write(f"INSERT INTO procedure_provided VALUES (default, {k},{i*10+j});\n")
         for p,(t,d,x) in enumerate(lab_tests,1):
-            f.write(f"INSERT INTO lab_test_provided VALUES ({p},{i*10+j});\n")
+            f.write(f"INSERT INTO lab_test_provided VALUES (default, {p},{i*10+j});\n")
         for k,(t,x,d) in enumerate(medicines,1):
             f.write(f"INSERT INTO inventory VALUES (default,{i*10+j},{k},{random.randint(1,20)*100},'{rand_date(datetime(2026,1,1),datetime(2028,1,1)).date()}',default);\n")
         for k,(t,d) in enumerate(vaccines,1):
@@ -435,7 +435,7 @@ for i in range(10):
             wid += 1
             f.write(f"INSERT INTO users(id,password,role) VALUES ({wid},'password','worker');\n")
             f.write(f"""INSERT INTO healthcareworker VALUES({wid},'Worker{wid}','Doctor');\n""")
-            f.write(f"""INSERT INTO works VALUES({wid},{i*10+j},'2020-01-01',NULL);\n""")
+            f.write(f"""INSERT INTO works VALUES(default, {wid},{i*10+j},'2020-01-01',NULL);\n""")
             f.write(f"""INSERT INTO skills VALUES(default,{wid},'MBBS','qualification');\n""")
             if random.randint(1,10) >= 4:
                 f.write(f"""INSERT INTO skills VALUES(default,{wid},'MD','qualification');\n""")
@@ -445,7 +445,7 @@ for i in range(10):
             wid += 1
             f.write(f"INSERT INTO users(id,password,role) VALUES ({wid},'password','worker');\n")
             f.write(f"""INSERT INTO healthcareworker VALUES({wid},'Worker{wid}','Nurse');\n""")
-            f.write(f"""INSERT INTO works VALUES({wid},{i*10+j},'2020-01-01',NULL);\n""")
+            f.write(f"""INSERT INTO works VALUES(default,{wid},{i*10+j},'2020-01-01',NULL);\n""")
             f.write(f"""INSERT INTO skills VALUES(default,{wid},'B.Sc. Nursing','qualification');\n""")
             if random.randint(1,10) >= 6:
                 f.write(f"""INSERT INTO skills VALUES(default,{wid},'M.Sc. Nursing','qualification');\n""")
@@ -462,7 +462,7 @@ for i in range(10):
         f.write(f"""INSERT INTO healthfac_contact VALUES (default,{i*10+j},NULL,'{random.randint(10**6,10**7-1)*1000+i*10+j}',TRUE);\n""") 
 
         for k in [1,2,14,15,16,17,18,19,20,22,23]:
-            f.write(f"INSERT INTO lab_test_provided VALUES ({k},{i*10+j});\n")
+            f.write(f"INSERT INTO lab_test_provided VALUES (default,{k},{i*10+j});\n")
         for k in range(1,6):
             f.write(f"INSERT INTO inventory VALUES (default,{i*10+j},{k},{random.randint(1,20)*100},'{rand_date(datetime(2026,1,1),datetime(2028,1,1)).date()}',default);\n")
         f.write(f"INSERT INTO inventory VALUES (default,{i*10+j},{random.randint(6,20)},{random.randint(1,20)*100},'{rand_date(datetime(2026,1,1),datetime(2028,1,1)).date()}',default);\n")
@@ -473,7 +473,7 @@ for i in range(10):
             wid += 1
             f.write(f"INSERT INTO users(id,password,role) VALUES ({wid},'password','worker');\n")
             f.write(f"""INSERT INTO healthcareworker VALUES({wid},'Worker{wid}','Doctor');\n""")
-            f.write(f"""INSERT INTO works VALUES({wid},{i*10+j},'2020-01-01',NULL);\n""")
+            f.write(f"""INSERT INTO works VALUES(default,{wid},{i*10+j},'2020-01-01',NULL);\n""")
             f.write(f"""INSERT INTO skills VALUES(default,{wid},'MBBS','qualification');\n""")
             if random.randint(1,10) >= 7:
                 f.write(f"""INSERT INTO skills VALUES(default,{wid},'MD','qualification');\n""")
@@ -482,7 +482,7 @@ for i in range(10):
             wid += 1
             f.write(f"INSERT INTO users(id,password,role) VALUES ({wid},'password','worker');\n")
             f.write(f"""INSERT INTO healthcareworker VALUES({wid},'Worker{wid}','Doctor');\n""")
-            f.write(f"""INSERT INTO works VALUES({wid},{i*10+j},'2020-01-01',NULL);\n""")
+            f.write(f"""INSERT INTO works VALUES(default,{wid},{i*10+j},'2020-01-01',NULL);\n""")
             f.write(f"""INSERT INTO skills VALUES(default,{wid},'MBBS','qualification');\n""")
             if random.randint(1,10) >= 6:
                 f.write(f"""INSERT INTO skills VALUES(default,{wid},'MD','qualification');\n""")
@@ -508,7 +508,7 @@ for i in range(10):
             wid += 1
             f.write(f"INSERT INTO users(id,password,role) VALUES ({wid},'password','worker');\n")
             f.write(f"""INSERT INTO healthcareworker VALUES({wid},'Worker{wid}','Pharmacist');\n""")
-            f.write(f"""INSERT INTO works VALUES({wid},{i*10+j},'2020-01-01',NULL);\n""")
+            f.write(f"""INSERT INTO works VALUES(default,{wid},{i*10+j},'2020-01-01',NULL);\n""")
             f.write(f"""INSERT INTO skills VALUES(default,{wid},'B.Pharm','qualification');\n""")
     
     for j in range(10,11):
@@ -519,12 +519,12 @@ for i in range(10):
         f.write(f"""INSERT INTO healthfac_contact VALUES (default,{i*10+j},'health{i*10+j}@gmail.com',NULL,FALSE);\n""")
         f.write(f"""INSERT INTO healthfac_contact VALUES (default,{i*10+j},NULL,'{random.randint(10**6,10**7-1)*1000+i*10+j}',TRUE);\n""") 
         for p,(t,d,x) in enumerate(lab_tests,1):
-            f.write(f"INSERT INTO lab_test_provided VALUES ({p},{i*10+j});\n")
+            f.write(f"INSERT INTO lab_test_provided VALUES (default,{p},{i*10+j});\n")
         for k in range(2):
             wid += 1
             f.write(f"INSERT INTO users(id,password,role) VALUES ({wid},'password','worker');\n")
             f.write(f"""INSERT INTO healthcareworker VALUES({wid},'Worker{wid}','Lab Tech');\n""")
-            f.write(f"""INSERT INTO works VALUES({wid},{i*10+j},'2020-01-01',NULL);\n""")
+            f.write(f"""INSERT INTO works VALUES(default,{wid},{i*10+j},'2020-01-01',NULL);\n""")
             f.write(f"""INSERT INTO skills VALUES(default,{wid},'B.Sc. Microbiology','qualification');\n""")
         labs.append(i*10+j)
 
@@ -589,7 +589,7 @@ for i in range(1,1001):
             date = rand_date(datetime(2011,1,1),datetime(2025,1,1))
             f.write(f"""INSERT INTO visit VALUES(default,{index},{centre},'{date.date()}','Delivery');\n""")
             for p in range(random.randint(1,2)):
-                f.write(f"INSERT INTO doctor_visit VALUES({vid}, {random.choice(docs[centre])},'Attending');\n")
+                f.write(f"INSERT INTO doctor_visit VALUES(default, {vid}, {random.choice(docs[centre])},'Attending');\n")
             #for p in range(random.randint(2,3)):
                 #f.write(f"INSERT INTO doctor_visit VALUES({vid}, {index}, {random.choice(nur[centre])})")
             f.write(f"INSERT INTO admission VALUES(default, {index}, {vid}, {mw[centre]}, '{date.date()}', '{(date + timedelta(days=random.randint(2,4))).date()}');\n")
@@ -599,7 +599,7 @@ for i in range(1,1001):
             date = '2026-3-18'
             f.write(f"""INSERT INTO visit VALUES(default,{index},{centre},'{date}','Delivery');\n""")
             for p in range(random.randint(1,2)):
-                f.write(f"INSERT INTO doctor_visit VALUES({vid}, {random.choice(docs[centre])},'Attending');\n")
+                f.write(f"INSERT INTO doctor_visit VALUES(default, {vid}, {random.choice(docs[centre])},'Attending');\n")
             f.write(f"INSERT INTO admission VALUES(default, {index}, {vid}, {mw[centre]}, '{date}', NULL);\n")
             f.write(f"INSERT INTO procedure_taken VALUES(default, {vid}, 3);\n")
             f.write(f"UPDATE wards SET occupied = occupied+1 where facility_id={centre} AND type='Maternity';\n")
@@ -614,7 +614,7 @@ for i in range(1,1001):
             date = '2026-3-18'
             f.write(f"""INSERT INTO visit VALUES(default,{index},{centre},'{date}','Health Checkup');\n""")
             for p in range(random.randint(1,2)):
-                f.write(f"INSERT INTO doctor_visit VALUES({vid}, {random.choice(docs[centre])},'Attending');\n")
+                f.write(f"INSERT INTO doctor_visit VALUES(default, {vid}, {random.choice(docs[centre])},'Attending');\n")
             lab = random.choice(labs+vacc_places)
             for p in [10,12,14]:
                 oid+=1
@@ -632,7 +632,7 @@ for i in range(1,1001):
             date = rand_date(datetime(2011,1,1),datetime(2025,1,1))
             f.write(f"""INSERT INTO visit VALUES(default,{index},{centre},'{date.date()}','Health Checkup');\n""")
             for p in range(random.randint(1,2)):
-                f.write(f"INSERT INTO doctor_visit VALUES({vid}, {random.choice(docs[centre])},'Attending');\n")
+                f.write(f"INSERT INTO doctor_visit VALUES(default, {vid}, {random.choice(docs[centre])},'Attending');\n")
             lab = random.choice(labs+vacc_places)
             for p in [10,12,14]:
                 oid+=1
@@ -670,7 +670,7 @@ for i in range(1,1001):
             f.write(f"""INSERT INTO visit VALUES(default,{index},{centre},'{date.date()}','Illness');\n""")
     
             for p in range(random.randint(1,2)):
-                f.write(f"INSERT INTO doctor_visit VALUES({vid},{random.choice(docs[centre])},'Attending');\n")
+                f.write(f"INSERT INTO doctor_visit VALUES(default,{vid},{random.choice(docs[centre])},'Attending');\n")
     
             lab = random.choice(labs+vacc_places)
     
@@ -705,7 +705,7 @@ for i in range(1,1001):
     
         f.write(f"INSERT INTO admission VALUES(default,{index},{vid},{em[centre]},'{date.date()}',NULL);\n")
         for p in range(random.randint(1,2)):
-                f.write(f"INSERT INTO doctor_visit VALUES({vid},{random.choice(docs[centre])},'Attending');\n")
+                f.write(f"INSERT INTO doctor_visit VALUES(default,{vid},{random.choice(docs[centre])},'Attending');\n")
     
         f.write(f"UPDATE wards SET occupied = occupied+1 WHERE facility_id={centre} AND type='Emergency';\n")
 
