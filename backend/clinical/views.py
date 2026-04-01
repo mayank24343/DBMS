@@ -192,37 +192,39 @@ def search_facilities(request):
     
     if type_ == 'medicine':
         cursor.execute("""
-            SELECT DISTINCT hf.id, hf.name
+            SELECT DISTINCT hf.id, hf.name, hf.type, p.city, p.state, i.name
             FROM health_facility hf
             JOIN place p ON hf.id = p.id
             JOIN inventory inv ON p.id = inv.place_id
             JOIN item i ON inv.item_id = i.id
-            WHERE i.name ILIKE %s
+            WHERE i.name LIKE %s
         """, [f'%{query}%'])
     
     elif type_ == 'lab':
         cursor.execute("""
-            SELECT DISTINCT hf.id, hf.name
+            SELECT DISTINCT hf.id, hf.name, hf.type, p.city, p.state, lt.name
             FROM health_facility hf
+            JOIN place p ON hf.id = p.id
             JOIN lab_test_provided ltp ON hf.id = ltp.fac_id
             JOIN lab_test lt ON ltp.test_id = lt.id
-            WHERE lt.name ILIKE %s
+            WHERE lt.name LIKE %s
         """, [f'%{query}%'])
     
     elif type_ == 'procedure':
         cursor.execute("""
-            SELECT DISTINCT hf.id, hf.name
+            SELECT DISTINCT hf.id, hf.name, hf.type, p.city, p.state, mp.name
             FROM health_facility hf
+            JOIN place p ON hf.id = p.id
             JOIN procedure_provided pp ON hf.id = pp.fac_id
             JOIN medical_procedure mp ON pp.procedure_id = mp.procedure_id
-            WHERE mp.name ILIKE %s
+            WHERE mp.name LIKE %s
         """, [f'%{query}%'])
     
     else:
         return Response({"error": "Invalid type"}, status=400)
 
     rows = cursor.fetchall()
-    data = [{"id": row[0], "name": row[1]} for row in rows]
+    data = [{"id": row[0], "name": row[1], "type":row[2], "city":row[3], "state":row[4], "thing":row[5]} for row in rows]
     return Response(data)
 
 @api_view(['GET'])
@@ -311,18 +313,15 @@ def search_directory(request):
 def book_appointment(request):
     data = request.data
     cursor = connection.cursor()
-    cursor.execute("""
-        SELECT citizen_id FROM citizen WHERE aadhar_no = %s
-    """, [data['aadhar_no']])
-    row = cursor.fetchone()
-    if not row:
-        return Response({"error": "Citizen not found."}, status=404)
     
-    citizen_id = row[0]
+    
+    citizen_id = data.get('citizen_id')
+    if not citizen_id:
+        return Response({"error": "Citizen ID is required"}, status=400)
     cursor.execute("""
         INSERT INTO visit (citizen_id, centre_id, visit_date, reason)
         VALUES (%s, %s, %s, %s)
-    """, [citizen_id, data['facility_id'], data['appointment_date'], f"APPOINTMENT: {data['reason']}"])
+    """, [citizen_id, data['facility_id'], data['appointment_date'], f"{data['reason']}"])
     
     visit_id = cursor.lastrowid
     return Response({"message": "Appointment booked successfully!", "visit_id": visit_id}, status=201)

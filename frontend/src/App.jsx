@@ -12,6 +12,7 @@ import BookAppointment from './pages/BookAppointment';
 import ServiceDirectory from './pages/ServiceDirectory';
 import VaccinationHistory from './pages/VaccinationHistory';
 import CitizenDashboard from './pages/CitizenDashboard';
+import EligibleVaccines from './pages/EligibleVaccines';
 
 function CitizenWrapper() {
   const { aadharNo } = useParams();
@@ -44,7 +45,7 @@ function App() {
               <div className="hidden md:flex space-x-6 text-sm font-semibold text-blue-200">
                 <Link to="/directory" className="hover:text-blue-200 transition-colors">Service Directory</Link>
                 {currentUser.role === 'citizen' && (
-                  <Link to={`/citizen/${currentUser.id}`} className="hover:text-white transition-colors">My Records</Link>
+                  <Link to={`/citizen/dashboard`} className="hover:text-white transition-colors">My Records</Link>
                 )}
                 {currentUser.role === 'worker' && (
                   <Link to={`/facility/${currentUser.id}`} className="hover:text-white transition-colors">Facility Command</Link>
@@ -66,16 +67,19 @@ function App() {
           {/* Protected Routes */}
           <main className="flex-grow">
             <Routes>
-              <Route path="/citizen/:aadharNo" element={<CitizenWrapper />} />
-              <Route path="/citizen/:aadharNo/book" element={<BookAppointment />} />
+              
               <Route path="/visit/:visitId" element={<VisitDetails />} />
               <Route path="/facility/:facId" element={<FacilityDashboard />} />
-              <Route path="/worker/:facId/new-visit" element={<CreateVisit />} />
+              
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/directory" element={<ServiceDirectory />} />
               <Route path="/citizen/dashboard" element={<CitizenDashboard />} />
-              <Route path="/citizen/vaccination/history" element={<VaccinationHistory />} />
-              <Route path="/citizen/vaccination/eligible" element={<VaccinationHistory />} />
+              <Route path="/visit/:visitId" element={<VisitDetails />} />
+              <Route path="/facility-dashboard" element={<FacilityDashboard />} />
+              <Route path="/book/appointment" element={<BookAppointment />} />
+              <Route path="/vaccination/history" element={<VaccinationHistory citizenId={currentUser.id}/>} />
+              <Route path="/eligible/vaccines" element={<EligibleVaccines citizenId={currentUser.id}/>} />
+              <Route path='/medical/history' element={<MedicalHistory citizenId={currentUser.id} />} />
               
               {/* Fallback route if they type a bad URL */}
               <Route path="*" element={<Navigate to="/" replace />} />

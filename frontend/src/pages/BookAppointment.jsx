@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { bookCitizenAppointment } from '../services/api';
+import { citizenAPI } from '../services/api';
 import { CalendarClock, ArrowLeft, MapPin, Stethoscope } from 'lucide-react';
 
 const BookAppointment = () => {
-    const { aadharNo } = useParams();
     const navigate = useNavigate();
 
     const [facilities, setFacilities] = useState([]);
+    
+    console.log("User ID in BookAppointment:", localStorage.getItem('citizen_id')); // Debugging line
     const [formData, setFormData] = useState({
-        aadhar_no: aadharNo,
+        citizen_id: localStorage.getItem('citizen_id') || '',
         facility_id: '',
         appointment_date: '',
         reason: ''
@@ -50,15 +51,16 @@ const BookAppointment = () => {
 
         try {
             // 🔥 Map to backend schema
-            await bookCitizenAppointment({
-                citizen_id: formData.aadhar_no,
-                centre_id: formData.facility_id,
-                visit_date: formData.appointment_date,
+            console.log({citizen_id: formData.citizen_id, centre_id: formData.facility_id, visit_date: formData.appointment_date, reason: formData.reason});
+            await citizenAPI.bookAppointment({
+                citizen_id: formData.citizen_id,
+                facility_id: formData.facility_id,
+                appointment_date: formData.appointment_date,
                 reason: formData.reason
             });
 
             alert("Appointment scheduled successfully!");
-            navigate(`/citizen/${aadharNo}`);
+            navigate(`/citizen/dashboard`);
         } catch (err) {
             console.error(err);
             setError(err.response?.data?.error || "Failed to book appointment");
@@ -69,7 +71,7 @@ const BookAppointment = () => {
     return (
         <div className="max-w-2xl mx-auto p-6 mt-8">
             <Link
-                to={`/citizen/${aadharNo}`}
+                to={`/citizen/dashboard`}
                 className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium mb-6 transition-colors"
             >
                 <ArrowLeft className="w-4 h-4" /> Back to My Records

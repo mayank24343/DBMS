@@ -4,18 +4,22 @@ import { Search, Filter, MapPin, Stethoscope, Pill, TestTube } from 'lucide-reac
 
 const ServiceDirectory = () => {
   const [query, setQuery] = useState('');
-  const [type, setType] = useState('lab');
+  const [type, setType] = useState('medicine');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const types = [
-    { value: 'lab', label: 'Labs', icon: TestTube },
-    { value: 'pharmacy', label: 'Pharmacies', icon: Pill },
-    { value: 'procedure', label: 'Procedures', icon: Stethoscope }
+    { value: 'medicine', label: 'Medicine/Vaccine', icon: TestTube },
+    { value: 'lab', label: 'Lab Test', icon: Pill },
+    { value: 'procedure', label: 'Procedure', icon: Stethoscope }
   ];
 
-  const search = async () => {
-    if (!query.trim()) return;
+  const search = async (query, type) => {
+    
+    if (!query.trim()) {
+        setResults([]);
+        return;
+    }
     
     setLoading(true);
     try {
@@ -29,11 +33,17 @@ const ServiceDirectory = () => {
   };
 
   useEffect(() => {
-    if (query.length >= 2) {
-      const timeoutId = setTimeout(search, 500);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [query, type]);
+  if (query.length < 2) {
+    setResults([]);
+    return;
+  }
+
+  const timeoutId = setTimeout(() => {
+    search(query, type); // ✅ pass fresh values
+  }, 400);
+
+  return () => clearTimeout(timeoutId);
+}, [query, type]);
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -42,7 +52,7 @@ const ServiceDirectory = () => {
           Find Healthcare Services
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Search for labs, pharmacies, or procedures near you
+          Search for medicines, vaccines, lab tests and procedures near you
         </p>
       </div>
 
@@ -92,12 +102,12 @@ const ServiceDirectory = () => {
                 <div>
                   <h3 className="font-bold text-xl text-gray-900">{facility.name}</h3>
                   <p className="text-gray-600">{facility.type}</p>
+                  <p className="text-gray-600">{facility.city}</p>
+                  <p className="text-gray-600">{facility.state}</p>
                 </div>
               </div>
-              <p className="text-gray-600 mb-6 leading-relaxed">{facility.address}</p>
-              <button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all">
-                Book Appointment
-              </button>
+              <p className="text-green-600 mb-6 leading-relaxed">Provides {facility.thing}</p>
+              
             </div>
           ))}
         </div>

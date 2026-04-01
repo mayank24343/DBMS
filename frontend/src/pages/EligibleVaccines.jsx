@@ -45,7 +45,7 @@ const EligibleVaccines = ({ citizenId }) => {
           {vaccines.map((vaccine) => (
             <div key={vaccine.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all hover:-translate-y-1">
               <h3 className="font-bold text-lg text-gray-900 mb-3">{vaccine.name}</h3>
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors" >
                 Schedule Vaccination
               </button>
             </div>

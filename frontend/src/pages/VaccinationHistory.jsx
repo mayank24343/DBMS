@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getVaccinationHistory } from '../services/api';
+import { citizenAPI } from '../services/api';
 import { Syringe, Calendar } from 'lucide-react';
 
 const VaccinationHistory = ({ citizenId }) => {
@@ -7,7 +7,7 @@ const VaccinationHistory = ({ citizenId }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        getVaccinationHistory(citizenId)
+        citizenAPI.vaccinationHistory(citizenId)
             .then(res => {
                 setData(res);
                 setLoading(false);

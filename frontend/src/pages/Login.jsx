@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldPlus } from 'lucide-react';
 
-const Login = () => {
+const Login = ({onLogin}) => {
     const navigate = useNavigate();
 
     const [role, setRole] = useState('citizen');
@@ -48,7 +48,13 @@ const Login = () => {
 
             if (data.role === "citizen") {
                 localStorage.setItem("citizen_id", data.citizen_id);
-                navigate('/citizen-dashboard');
+                            
+                onLogin({
+                    role: "citizen",
+                    id: data.citizen_id
+                });
+            
+                navigate('/citizen/dashboard');
             }
 
             else if (data.role === "worker") {
