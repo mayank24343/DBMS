@@ -37,6 +37,47 @@ const VisitDetails = () => {
     );
   }
 
+  // Handle multiple admissions
+  const renderAdmissions = () => {
+    if (!visit.admission || visit.admission.length === 0) {
+      return (
+        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-12 text-center">
+          <ClipboardList className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-lg text-gray-500 font-medium">No admission records</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {visit.admission.map((a, idx) => (
+          <div key={idx} className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-8">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="p-2 bg-blue-200 rounded-xl">
+                <ClipboardList className="w-6 h-6 text-blue-700" />
+              </div>
+              <h4 className="font-bold text-xl">Admission #{idx + 1}</h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+              <div>
+                <span className="text-gray-600 font-medium">Ward:</span>
+                <p className="text-lg font-bold text-gray-900 mt-1">{a.ward || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="text-gray-600 font-medium">Admission Date:</span>
+                <p className="text-lg font-bold text-gray-900 mt-1">{a.admission_date || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="text-gray-600 font-medium">Discharge Date:</span>
+                <p className="text-lg font-bold text-gray-900 mt-1">{a.discharge_date || 'Currenntly Admitted'}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       {/* Header */}
@@ -82,6 +123,15 @@ const VisitDetails = () => {
             <p className="text-lg text-gray-800 leading-relaxed">{visit.reason}</p>
           </div>
         </div>
+      </div>
+
+      {/* Admissions */}
+      <div className="mb-8">
+        <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
+          <ClipboardList className="w-7 h-7 text-blue-600" />
+          Admission History
+        </h3>
+        {renderAdmissions()}
       </div>
 
       {/* Diagnoses */}

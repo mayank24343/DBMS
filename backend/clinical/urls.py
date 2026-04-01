@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import  available_facilities, create_visit_with_diagnosis, book_appointment, eligible_vaccines, lab_reports, medical_history, search_facilities, visit_detail
+from .views import  available_facilities, create_visit_with_diagnosis, book_appointment, current_appointments, current_prescriptions, eligible_vaccines, lab_reports, medical_history, search_facilities, visit_detail
 from .views import get_facilities, vaccination_history
     
 urlpatterns = [
@@ -13,6 +13,8 @@ urlpatterns = [
 
     path('api/search/', search_facilities),
     path('api/facilities/available/', available_facilities),
+    path('api/current/prescriptions/<int:citizen_id>/', current_prescriptions),
+    path('api/current/appointments/<int:citizen_id>/', current_appointments),
     
     path('api/visit/new/', create_visit_with_diagnosis, name='create-visit'),
    

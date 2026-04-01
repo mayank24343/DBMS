@@ -33,6 +33,14 @@ export const citizenAPI = {
     });
     return response.data;
   },
+  currentAppointments: async (citizenId) => {
+    const response = await api.get('api/current/appointments/<int:citizen_id>/'.replace('<int:citizen_id>', citizenId));
+    return response.data;
+  },
+  currentPrescriptions: async (citizenId) => {
+    const response = await api.get('api/current/prescriptions/<int:citizen_id>/'.replace('<int:citizen_id>', citizenId));
+    return response.data;
+  }
 };
 
 export const facilityAPI = {

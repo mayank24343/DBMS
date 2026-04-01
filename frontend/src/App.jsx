@@ -13,6 +13,7 @@ import ServiceDirectory from './pages/ServiceDirectory';
 import VaccinationHistory from './pages/VaccinationHistory';
 import CitizenDashboard from './pages/CitizenDashboard';
 import EligibleVaccines from './pages/EligibleVaccines';
+import UpcomingAppointments from './pages/UpcomingAppointments';
 
 function CitizenWrapper() {
   const { aadharNo } = useParams();
@@ -80,6 +81,7 @@ function App() {
               <Route path="/vaccination/history" element={<VaccinationHistory citizenId={currentUser.id}/>} />
               <Route path="/eligible/vaccines" element={<EligibleVaccines citizenId={currentUser.id}/>} />
               <Route path='/medical/history' element={<MedicalHistory citizenId={currentUser.id} />} />
+               <Route path='/upcoming' element={<UpcomingAppointments citizenId={currentUser.id} />} />
               
               {/* Fallback route if they type a bad URL */}
               <Route path="*" element={<Navigate to="/" replace />} />

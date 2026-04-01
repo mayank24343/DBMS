@@ -16,7 +16,7 @@ def medical_history(request, citizen_id):
         SELECT v.id, v.visit_date, hf.name, v.reason
         FROM visit v
         LEFT JOIN health_facility hf ON v.centre_id = hf.id
-        WHERE v.citizen_id = %s
+        WHERE v.citizen_id = %s and status='done'
         ORDER BY v.visit_date DESC
     """, [citizen_id])
     
@@ -114,7 +114,7 @@ def visit_detail(request, id):
     
     # base visit
     cursor.execute("""
-        SELECT v.visit_date, hf.name, v.reason
+        SELECT v.visit_date, hf.name, v.reason, v.status
         FROM visit v
         LEFT JOIN health_facility hf ON v.centre_id = hf.id
         WHERE v.id = %s
@@ -127,10 +127,12 @@ def visit_detail(request, id):
         "visit_date": row[0],
         "facility": row[1],
         "reason": row[2],
+        "status": row[3],
         "diagnosis": [],
         "prescriptions": [],
         "lab_tests": [],
-        "procedures": []
+        "procedures": [],
+        "admission": []
     }
     
     # diagnoses
@@ -169,7 +171,49 @@ def visit_detail(request, id):
         WHERE pt.visit_id = %s
     """, [id])
     data["procedures"] = [row[0] for row in cursor.fetchall()]
+
+    #admission details
+    cursor.execute("""
+        SELECT a.admission_date, a.discharge_date, hf.name
+        FROM admission a
+        JOIN wards w ON a.ward_id = w.id 
+        JOIN health_facility hf ON w.facility_id = hf.id
+        WHERE a.visit_id = %s
+    """, [id])
+    admission_rows = cursor.fetchall()
+    if admission_rows:
+        data["admission"] = {"admission_date": admission_rows[0][0], "discharge_date": admission_rows[0][1], "ward": admission_rows[0][2]}
     
+    return Response(data)
+
+@api_view(['GET'])
+def current_prescriptions(request, citizen_id):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT i.name, p.dosage, p.frequency, v.visit_date
+        FROM prescription p
+        JOIN item i ON p.item_id = i.id
+        JOIN visit v ON p.visit_id = v.id
+        WHERE v.citizen_id = %s AND (p.end_date >= CURRENT_DATE and p.start_date <= CURRENT_DATE)
+    """, [citizen_id])
+    
+    rows = cursor.fetchall()
+    data = [{"item": row[0], "dosage": row[1], "frequency": row[2], "prescribed_on": row[3]} for row in rows]
+    return Response(data)
+
+@api_view(['GET'])
+def current_appointments(request, citizen_id):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT v.id, v.visit_date, hf.name, v.reason
+        FROM visit v
+        JOIN health_facility hf ON v.centre_id = hf.id
+        WHERE v.citizen_id = %s AND v.visit_date >= CURRENT_DATE and v.status = 'pending'
+        ORDER BY v.visit_date ASC
+    """, [citizen_id])
+    
+    rows = cursor.fetchall()
+    data = [{"id": row[0], "visit_date": row[1], "facility": row[2], "reason": row[3]} for row in rows]
     return Response(data)
 
 @api_view(['POST'])
@@ -228,6 +272,7 @@ def search_facilities(request):
     if (len(data) > 100):
         data = data[:100]  # limit to 100 results
     return Response(data)
+
 
 
 

@@ -42,8 +42,8 @@ const CitizenDashboard = () => {
         citizenAPI.medicalHistory(citizenId).catch(() => []),
         citizenAPI.vaccinationHistory(citizenId).catch(() => []),
         citizenAPI.eligibleVaccines(citizenId).catch(() => []),
-        fetchPendingPrescriptions(citizenId).catch(() => []),
-        fetchPendingAppointments(citizenId).catch(() => [])
+        citizenAPI.currentPrescriptions(citizenId).catch(() => []),
+        citizenAPI.currentAppointments(citizenId).catch(() => [])
       ]);
 
       setStats({
@@ -94,10 +94,10 @@ const CitizenDashboard = () => {
       desc: "Current medications & refills"
     },
     {
-      title: "Pending Appointments",
+      title: "Upcoming Appointments",
       count: stats.pendingAppointments,
       icon: CalendarDays,
-      to: "/appointments",
+      to: "/upcoming",
       color: "from-orange-500 to-orange-600",
       desc: "Upcoming visits & bookings"
     },
@@ -151,7 +151,7 @@ const CitizenDashboard = () => {
 
         {/* Dynamic Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3 gap-6 mb-20">
-          {cards.slice(0, 4).map((card, index) => {
+          {cards.map((card, index) => {
             const Icon = card.icon;
             return (
               <Link 
@@ -160,7 +160,7 @@ const CitizenDashboard = () => {
                 className="group relative overflow-hidden bg-white/70 backdrop-blur-xl rounded-3xl p-8 shadow-2xl hover:shadow-3xl border border-white/50 hover:border-blue-200 transition-all duration-500 hover:-translate-y-2 h-full flex flex-col"
               >
                 <div className="p-4 bg-gradient-to-br rounded-2xl mb-6 group-hover:scale-110 transition-transform duration-300" style={{background: `linear-gradient(135deg, ${card.color.replace('to-', ', ')})`}}>
-                  <Icon className="w-10 h-10 text-white drop-shadow-lg" />
+                  <Icon className="w-10 h-10 text-blue-900 drop-shadow-lg" />
                 </div>
                 <div className="flex-1">
                   <h3 className="text-2xl font-black text-gray-900 mb-2 group-hover:text-blue-700 transition-colors">{card.title}</h3>
@@ -173,7 +173,7 @@ const CitizenDashboard = () => {
                     </span>
                   ) : (
                     <span className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm font-bold rounded-full">
-                      Explore
+                      Go To Page
                     </span>
                   )}
                 </div>
@@ -183,26 +183,7 @@ const CitizenDashboard = () => {
         </div>
 
         {/* Secondary Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {cards.slice(4).map((card, index) => {
-            const Icon = card.icon;
-            return (
-              <Link 
-                key={card.title}
-                to={card.to}
-                className="group bg-white/60 backdrop-blur-xl rounded-3xl p-8 shadow-xl hover:shadow-2xl border border-white/30 hover:border-blue-200 transition-all duration-300 hover:-translate-y-1 flex items-center gap-4 h-32"
-              >
-                <div className="p-4 bg-gradient-to-br rounded-2xl flex-shrink-0" style={{background: `linear-gradient(135deg, ${card.color.replace('to-', ', ')})`}}>
-                  <Icon className="w-8 h-8 text-white" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-xl text-gray-900 mb-1 group-hover:text-blue-700">{card.title}</h4>
-                  <p className="text-gray-600 text-sm">{card.desc}</p>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+        
       </div>
     </div>
   );
