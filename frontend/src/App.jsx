@@ -30,6 +30,8 @@ import AdmitPatient from './pages/AdmitPatient';
 import DischargePatient from './pages/DischargePatient';
 import AddProcedure from './pages/AddProcedure';
 import CurrentPatients from './pages/CurrentPatients';
+import TransferPatient from './pages/TransferPatient';
+import AddVaccination from './pages/AddVaccination';
 
 function CitizenWrapper() {
   const { aadharNo } = useParams();
@@ -113,6 +115,8 @@ function App() {
                <Route path='/admit/:visitId' element={<AdmitPatient />} />
                <Route path='/discharge/:visitId' element={<DischargePatient />} />
                <Route path='/procedure/:visitId' element={<AddProcedure />} />
+               <Route path='/transfer/:visitId' element={<TransferPatient />} />
+<Route path='/vaccination/:visitId' element={<AddVaccination />} />
                <Route path='/current-patients' element={<CurrentPatients />} />
               
               

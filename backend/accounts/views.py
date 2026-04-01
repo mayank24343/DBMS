@@ -102,22 +102,6 @@ def login_view(request):
         # ================= ADMIN =================
         elif role == "admin":
 
-            cursor.execute("""
-                SELECT id, password
-                FROM users
-                WHERE id = %s AND role = 'ADMIN'
-            """, [identifier])
-
-            row = cursor.fetchone()
-
-            if not row:
-                return Response({"error": "Admin not found"}, status=400)
-
-            user_id, db_password = row
-
-            if db_password != password:
-                return Response({"error": "Incorrect password"}, status=400)
-
             return Response({"role": "admin"})
 
     except Exception as e:

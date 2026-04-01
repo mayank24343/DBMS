@@ -142,18 +142,21 @@ def ward_admitted_patients(request, fac_id):
     return Response(data)
 
 @api_view(['GET'])
-def get_citizen(request, citizen_id):
+def get_citizen(request, patient_id):
     cursor = connection.cursor()
     cursor.execute("""
-        SELECT citizen_id, name, age, gender
+        SELECT citizen_id, name, dob, sex
         FROM citizen
         WHERE citizen_id = %s   
-    """, [citizen_id])
+    """, [patient_id])
+    row = cursor.fetchone()
+    if not row:
+        return Response({"error": "Citizen not found"}, status=404)
     return Response({
-        "citizen_id": citizen_id,
-        "name": cursor.fetchone()[1],
-        "age": cursor.fetchone()[2],
-        "gender": cursor.fetchone()[3]
+        "citizen_id": patient_id,
+        "name": row[1],
+        "dob": row[2],
+        "gender": row[3]
     })
 
 
@@ -360,7 +363,7 @@ def transfer_patient(request):
     
     # Log transfer
     cursor.execute("""
-        INSERT INTO transfer (visit_id, citizen_id, from_fac, to_fac, date_of_transfer, reason)
+        INSERT INTO transfers (visit_id, citizen_id, from_fac, to_fac, date_of_transfer, reason)
         VALUES (%s, %s, %s, %s, %s, %s)
     """, [visit_id, citizen_id, from_fac, to_fac, date.today(), request.data.get('reason', '')])
     

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Users, Stethoscope, Pill, TestTube, Bed, ArrowRight, Activity } from 'lucide-react';
+import { ArrowLeft, Users, Stethoscope, Pill, TestTube, Bed, ArrowRight, Activity, Syringe } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 
@@ -150,6 +150,14 @@ const CurrentPatients = () => {
                             <Activity className="w-4 h-4" />
                             Add Underwent Procedure
                           </Link>
+
+                          <Link 
+                            to={`/vaccination/${patient.visit_id}`}
+                            className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-5 py-3 rounded-xl font-bold hover:shadow-lg hover:from-blue-600 hover:to-indigo-600 transition-all flex items-center gap-2 text-sm shadow-md"
+                          >
+                            <Syringe className="w-4 h-4" />
+                            Add Vaccination
+                          </Link>
                           
                           {patient.ward && !patient.discharge_date && (
                             <Link 
@@ -157,6 +165,15 @@ const CurrentPatients = () => {
                               className="bg-gradient-to-r from-purple-500 to-violet-500 text-white px-5 py-3 rounded-xl font-bold hover:shadow-lg hover:from-purple-600 hover:to-violet-600 transition-all flex items-center gap-2 text-sm shadow-md"
                             >
                               Discharge
+                            </Link>
+                          )}
+
+                          {patient.ward && !patient.discharge_date && (
+                            <Link 
+                              to={`/transfer/${patient.visit_id || patient.id}`}
+                              className="bg-gradient-to-r from-purple-500 to-violet-500 text-white px-5 py-3 rounded-xl font-bold hover:shadow-lg hover:from-purple-600 hover:to-violet-600 transition-all flex items-center gap-2 text-sm shadow-md"
+                            >
+                              Transfer
                             </Link>
                           )}
                           

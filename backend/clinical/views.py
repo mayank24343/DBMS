@@ -546,14 +546,21 @@ def get_procedures(request):
 def get_medicines(request):
     cursor = connection.cursor()
     cursor.execute("""
-        SELECT id, name FROM item WHERE type = 'medicine' or type= 'vaccine'
+        SELECT id, name, type FROM item WHERE type = 'medicine' or type= 'vaccine'
     """)
     
     rows = cursor.fetchall()
-    data = [{"id": row[0], "name": row[1]} for row in rows]
+    data = [{"id": row[0], "name": row[1], "type":row[2]} for row in rows]
     return Response(data)
 
 
 
-
+@api_view(['POST'])
+def create_vaccination(request, visit_id):
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO vaccination (citizen_id, vaccine_id, dose_no, centre_id, vaccination_date)
+        VALUES (%s, %s, %s, %s, %s)
+    """, [request.data['citizen_id'], request.data['item_id'], request.data['dose_number'], request.data['centre_id'], date.today()])
+    return Response({"status": "vaccination recorded"})
 

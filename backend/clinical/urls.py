@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import  available_facilities, create_visit, create_diagnosis, book_appointment, current_appointments, current_prescriptions, eligible_vaccines, lab_reports, medical_history, search_facilities, visit_detail
 from .views import get_facilities, vaccination_history
-from .views import get_all_diseases, get_lab_tests, get_procedures, get_medicines, create_prescription, create_lab_order, create_procedure
+from .views import get_all_diseases, get_lab_tests, get_procedures, get_medicines, create_prescription, create_lab_order, create_procedure, create_vaccination
     
 urlpatterns = [
     path('api/history/<int:citizen_id>/', medical_history),
@@ -23,6 +23,7 @@ urlpatterns = [
     path('api/prescription/<int:visit_id>/', create_prescription, name='create-visit-with-prescription'),
     path('api/lab-order/<int:visit_id>/', create_lab_order, name='create-visit-with-lab-order'),
     path('api/procedure/<int:visit_id>/', create_procedure, name='create-visit-with-procedure'),
+    path('api/vaccination/<int:visit_id>/', create_vaccination, name='create-visit-with-vaccination'),
    
     path('api/facilities/', get_facilities),
     path('api/diseases/', get_all_diseases),

@@ -51,9 +51,8 @@ const PatientDetails = () => {
               <User className="w-12 h-12 text-white" />
             </div>
             <div className="flex-1">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">[Patient Name]</h2>
-              <p className="text-xl text-gray-600 mb-1">Age: 34 • Gender: Male</p>
-              <p className="text-xl text-gray-600">Contact: +91 98765 43210 • patient@example.com</p>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Patient #{patientId}</h2>
+              
             </div>
           </div>
         </div>
@@ -88,4 +87,3 @@ const PatientDetails = () => {
 };
 
 export default PatientDetails;
-
