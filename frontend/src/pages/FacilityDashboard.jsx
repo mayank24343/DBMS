@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { facilityAPI } from '../services/api';
-import { Hospital, Users, TrendingUp, ClipboardList, Syringe, FileText, ShoppingCart, AlertCircle, Calendar, MapPin } from 'lucide-react';
+import { Hospital, Users, TrendingUp, ClipboardList, Syringe, FileText, ShoppingCart, AlertCircle, Calendar, MapPin, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const FacilityDashboard = () => {
@@ -141,23 +141,29 @@ const FacilityDashboard = () => {
 
         {/* Action Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          <Link to="/new-visit">
           <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all cursor-pointer group" onClick={() => setShowCreateVisit(true)}>
             <ClipboardList className="w-12 h-12 mx-auto mb-4 opacity-90 group-hover:scale-110 transition-transform" />
             <h3 className="text-xl font-bold mb-2">Create New Visit</h3>
             <p className="opacity-90">Register new patient visit</p>
           </div>
+          </Link>
           
+          <Link to="/current-patients/">
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all cursor-pointer group">
             <ClipboardList className="w-12 h-12 mx-auto mb-4 opacity-90 group-hover:scale-110 transition-transform" />
             <h3 className="text-xl font-bold mb-2">Create Diagnosis</h3>
             <p className="opacity-90">Add diagnosis, prescribe meds & tests</p>
           </div>
+          </Link>
           
+          <Link to="/current-patients/">
           <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all cursor-pointer group">
             <Users className="w-12 h-12 mx-auto mb-4 opacity-90 group-hover:scale-110 transition-transform" />
             <h3 className="text-xl font-bold mb-2">Admit/Discharge</h3>
             <p className="opacity-90">Patient admissions & ward management</p>
           </div>
+          </Link>
           
           <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all cursor-pointer group">
             <ShoppingCart className="w-12 h-12 mx-auto mb-4 opacity-90 group-hover:scale-110 transition-transform" />

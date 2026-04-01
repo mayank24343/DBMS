@@ -93,7 +93,11 @@ export const facilityAPI = {
   currentAppointments: async (facId) => {
     const response = await api.get(`api/facility/${facId}/appointments/today/`);
     return response.data;
-  } 
+  },
+  currentAllPatients: async (facId) => {
+    const response = await api.get(`api/facility/get-current-patient/${facId}`);
+    return response.data; 
+  },
     
 };
 

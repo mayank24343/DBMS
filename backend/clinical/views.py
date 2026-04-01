@@ -327,24 +327,23 @@ def book_appointment(request):
     return Response({"message": "Appointment booked successfully!", "visit_id": visit_id}, status=201)
 
 @api_view(['POST'])
-def create_visit_with_diagnosis(request):
+def create_visit(request):
     data = request.data
     cursor = connection.cursor()
+    citizen_id = data.get('citizen_id')
+
     cursor.execute("""
-        SELECT citizen_id FROM citizen WHERE aadhar_no = %s
-    """, [data['aadhar_no']])
-    row = cursor.fetchone()
-    if not row:
-        return Response({"error": "Citizen not found. Check Aadhar number."}, status=404)
-    
-    citizen_id = row[0]
-    cursor.execute("""
-        INSERT INTO visit (citizen_id, centre_id, visit_date, reason)
-        VALUES (%s, %s, %s, %s)
-    """, [citizen_id, data['facility_id'], data['visit_date'], data['reason']])
+        INSERT INTO visit (citizen_id, centre_id, visit_date, reason, status)
+        VALUES (%s, %s, CURRENT_DATE(), %s, 'done')
+    """, [citizen_id, data['facility_id'], data['reason']])
     
     visit_id = cursor.lastrowid
-    
+    return Response({"message": "Visit created successfully!", "visit_id": visit_id}, status=201)
+
+@api_view(['POST'])
+def create_diagnosis(request, visit_id):
+    data = request.data
+    cursor = connection.cursor()
     if data.get('disease_id'):
         cursor.execute("""
             INSERT INTO diagnosis (visit_id, disease_id, description)
@@ -355,6 +354,42 @@ def create_visit_with_diagnosis(request):
     
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+
+@api_view(['POST'])
+def create_prescription(request, visit_id):
+    data = request.data
+    cursor = connection.cursor()
+    if data.get('item_id'):
+        cursor.execute("""
+            INSERT INTO prescription (visit_id, item_id, dosage, frequency, start_date, end_date)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, [visit_id, data['item_id'], data['dosage'], data['frequency'], data['start_date'], data['end_date']])
+    
+    return Response({"message": "Success!", "visit_id": visit_id}, status=201)
+
+@api_view(['POST'])
+def create_lab_order(request, visit_id):
+    data = request.data
+    cursor = connection.cursor()
+    if data.get('test_id'):
+        cursor.execute("""
+            INSERT INTO lab_order (visit_id, test_id, lab_id, order_date)
+            VALUES (%s, %s, %s, CURRENT_DATE())
+        """, [visit_id, data['test_id'], data['lab_id']])
+    
+    return Response({"message": "Lab order created!", "visit_id": visit_id}, status=201)
+
+@api_view(['POST'])
+def create_procedure(request, visit_id):
+    data = request.data
+    cursor = connection.cursor()
+    if data.get('procedure_id'):
+        cursor.execute("""
+            INSERT INTO procedure_taken (visit_id, procedure_id)
+            VALUES (%s, %s)
+        """, [visit_id, data['procedure_id']])
+    
+    return Response({"message": "Procedure recorded!", "visit_id": visit_id}, status=201)
 
 
 @api_view(['GET'])
@@ -473,4 +508,52 @@ def disease_geographic_stats(request, disease_id):
     rows = cursor.fetchall()
     data = [{"state": row[0], "city": row[1], "case_count": row[2]} for row in rows]
     return Response(data)
+
+@api_view(['GET'])
+def get_all_diseases(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT id, name FROM disease
+    """)
+    
+    rows = cursor.fetchall()
+    data = [{"id": row[0], "name": row[1]} for row in rows]
+    return Response(data)
+
+@api_view(['GET'])
+def get_lab_tests(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT id, name FROM lab_test
+    """)
+    
+    rows = cursor.fetchall()
+    data = [{"id": row[0], "name": row[1]} for row in rows]
+    return Response(data)
+
+@api_view(['GET'])
+def get_procedures(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT procedure_id, name FROM medical_procedure
+    """)
+    
+    rows = cursor.fetchall()
+    data = [{"id": row[0], "name": row[1]} for row in rows]
+    return Response(data)
+
+@api_view(['GET'])
+def get_medicines(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT id, name FROM item WHERE type = 'medicine' or type= 'vaccine'
+    """)
+    
+    rows = cursor.fetchall()
+    data = [{"id": row[0], "name": row[1]} for row in rows]
+    return Response(data)
+
+
+
+
 

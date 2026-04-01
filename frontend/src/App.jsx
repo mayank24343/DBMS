@@ -22,6 +22,14 @@ import PatientVaccinationHistory from './pages/PatientVaccinationHistory';
 import PatientEligibleVaccines from './pages/PatientEligibleVaccines';
 import FacilityInventory from './pages/FacilityInventory';
 import FacilityAppointment from './pages/FacilityAppointment';
+import NewVisit from './pages/NewVisit';
+import AddDiagnosis from './pages/AddDiagnosis';
+import AddPrescription from './pages/AddPrescription';
+import AddLabOrders from './pages/AddLabOrders';
+import AdmitPatient from './pages/AdmitPatient';
+import DischargePatient from './pages/DischargePatient';
+import AddProcedure from './pages/AddProcedure';
+import CurrentPatients from './pages/CurrentPatients';
 
 function CitizenWrapper() {
   const { aadharNo } = useParams();
@@ -96,8 +104,16 @@ function App() {
                <Route path='/patient/history/:citizenId' element={<PatientHistory />} />
                <Route path='/patient/vaccination/:citizenId' element={<PatientVaccinationHistory />} />
                <Route path='/patient/vaccination/eligible/:citizenId' element={<PatientEligibleVaccines />} />
-               <Route path='/inventory' element={<FacilityInventory />} />
+              <Route path='/inventory' element={<FacilityInventory />} />
                <Route path='/facility-appointments' element={<FacilityAppointment />} />
+               <Route path='/new-visit' element={<NewVisit />} />
+               <Route path='/diagnosis/:visitId' element={<AddDiagnosis />} />
+               <Route path='/prescription/:visitId' element={<AddPrescription />} />
+               <Route path='/lab-orders/:visitId' element={<AddLabOrders />} />
+               <Route path='/admit/:visitId' element={<AdmitPatient />} />
+               <Route path='/discharge/:visitId' element={<DischargePatient />} />
+               <Route path='/procedure/:visitId' element={<AddProcedure />} />
+               <Route path='/current-patients' element={<CurrentPatients />} />
               
               
               {/* Fallback route if they type a bad URL */}

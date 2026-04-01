@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     # basic
+    get_current_visit_admit,
     get_facility,
     facility_contacts,
     get_citizen,
@@ -38,7 +39,8 @@ from .views import (
     # disease analytics
     disease_geo,
     disease_daily,
-    disease_monthly_avg
+    disease_monthly_avg,
+    visit_id,
 )
 
 urlpatterns = [
@@ -51,7 +53,9 @@ urlpatterns = [
     path('wards/<int:fac_id>/', get_ward_availability, name='ward-availability'),
     path('facility/<int:fac_id>/occupancy/', facility_occupancy, name='facility-occupancy'),
 
+
     path('facility/get-patient/<int:patient_id>', get_citizen, name='get-patient'),
+    path('facility/get-current-patient/<int:fac_id>', get_current_visit_admit, name='get-current-patient'),
     
 
     # ================= APPOINTMENTS =================
@@ -80,7 +84,8 @@ urlpatterns = [
     # patients + inventory
     path('facility/<int:fac_id>/patients/admitted/', admitted_patients),
     path('facility/<int:fac_id>/inventory/low/', low_inventory),
-    
+    path('visit/id/<int:visit_id>/', visit_id),
+
 
     # disease analytics
     path('stats/disease/<int:disease_id>/geo/', disease_geo),

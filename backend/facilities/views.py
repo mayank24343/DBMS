@@ -7,6 +7,12 @@ from rest_framework.response import Response
 from django.db import connection
 from datetime import date, timedelta
 
+from datetime import datetime
+import pytz
+
+ist = pytz.timezone('Asia/Kolkata')
+today = datetime.now(ist).date()
+
 @api_view(['GET'])
 def get_facility(request, id):
     cursor = connection.cursor()
@@ -60,7 +66,7 @@ def today_appointments(request, fac_id):
         SELECT v.id, v.citizen_id, c.name, v.reason, v.visit_date
         FROM visit v
         JOIN citizen c ON v.citizen_id = c.citizen_id
-        WHERE v.centre_id = %s AND v.visit_date = %s
+        WHERE v.centre_id = %s AND v.visit_date = %s and status = 'pending'
     """, [fac_id, today])
     
     rows = cursor.fetchall()
@@ -267,6 +273,34 @@ def log_usage(request):
     """, [request.data['item_id'], request.data['facility_id'], date.today(), request.data['quantity']])
     return Response({"status": "logged"})
 
+@api_view(['GET'])
+def get_current_visit_admit(request, fac_id):
+    cursor = connection.cursor()
+    cursor.execute("""
+                     (
+  SELECT v.id, v.visit_date, v.citizen_id, c.name
+  FROM visit v
+  JOIN admission a ON a.visit_id = v.id
+                   JOIN citizen c ON v.citizen_id = c.citizen_id
+  WHERE v.centre_id = %s AND a.discharge_date IS NULL
+) UNION DISTINCT 
+                   (SELECT v.id, v.visit_date, v.citizen_id, c.name
+                    FROM visit v JOIN citizen c ON v.citizen_id = c.citizen_id
+                    WHERE v.centre_id = %s AND v.visit_date = %s)
+    """,[fac_id, fac_id, today])
+    
+    rows = cursor.fetchall()
+    data = [
+        {
+            "visit_id": row[0],
+            "visit_date": row[1],
+            "citizen_id": row[2],
+            "name": row[3],
+            
+        } for row in rows
+    ]
+    return Response(data)
+
 @api_view(['POST'])
 def admit_patient(request):
     cursor = connection.cursor()
@@ -282,6 +316,9 @@ def admit_patient(request):
         INSERT INTO admission (citizen_id, visit_id, ward_id, admission_date)
         VALUES (%s, %s, %s, %s)
     """, [request.data['citizen_id'], request.data['visit_id'], request.data['ward_id'], date.today()])
+    cursor.execute("""
+                   UPDATE visit SET status='done' WHERE id = %s
+    """, [request.data['visit_id']])
     
     return Response({"status": "admitted"})
 
@@ -441,7 +478,7 @@ def all_lab_tests(request, lab_id):
 def admitted_patients(request, fac_id):
     cursor = connection.cursor()
     cursor.execute("""
-        SELECT a.citizen_id, c.name, w.type, a.admission_date
+        SELECT a.citizen_id, c.name, w.type, a.admission_date, a.visit_id
         FROM admission a
         JOIN wards w ON a.ward_id = w.id
         JOIN citizen c ON a.citizen_id = c.citizen_id
@@ -454,7 +491,8 @@ def admitted_patients(request, fac_id):
             "citizen_id": row[0],
             "name": row[1],
             "ward": row[2],
-            "admission_date": row[3]
+            "admission_date": row[3],
+            "visit_id": row[4]
         } for row in rows
     ]
     return Response(data)
@@ -542,4 +580,17 @@ def disease_monthly_avg(request, disease_id):
         } for row in rows
     ]
     return Response(result)
+
+@api_view(['GET'])
+def visit_id(request, visit_id):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT citizen_id FROM visit WHERE id = %s
+    """, [visit_id])
+    
+    row = cursor.fetchone()
+    if not row:
+        return Response({"error": "Visit not found"}, status=404)
+    
+    return Response({"citizen_id": row[0]})
 
