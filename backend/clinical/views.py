@@ -185,11 +185,10 @@ def book_appointment(request):
 
 @api_view(['GET'])
 def search_facilities(request):
-    query = request.GET.get('q', '')
+    query = request.GET.get('query', '')
     type_ = request.GET.get('type')
 
     cursor = connection.cursor()
-    
     if type_ == 'medicine':
         cursor.execute("""
             SELECT DISTINCT hf.id, hf.name, hf.type, p.city, p.state, i.name
@@ -201,6 +200,7 @@ def search_facilities(request):
         """, [f'%{query}%'])
     
     elif type_ == 'lab':
+        
         cursor.execute("""
             SELECT DISTINCT hf.id, hf.name, hf.type, p.city, p.state, lt.name
             FROM health_facility hf
@@ -225,7 +225,11 @@ def search_facilities(request):
 
     rows = cursor.fetchall()
     data = [{"id": row[0], "name": row[1], "type":row[2], "city":row[3], "state":row[4], "thing":row[5]} for row in rows]
+    if (len(data) > 100):
+        data = data[:100]  # limit to 100 results
     return Response(data)
+
+
 
 @api_view(['GET'])
 def available_facilities(request):
@@ -259,55 +263,6 @@ def available_facilities(request):
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-
-
-@api_view(['GET'])
-def search_directory(request):
-    search_type = request.GET.get('type', 'lab')
-    query = request.GET.get('query', '').strip()
-
-    try:
-        facilities = HealthFacility.objects.all()
-
-        # 🔬 LAB SEARCH
-        if search_type == 'lab':
-            facilities = facilities.filter(
-                labtestprovided__test__name__icontains=query
-            )
-
-        # 💊 PHARMACY SEARCH
-        elif search_type == 'pharmacy':
-            facilities = facilities.filter(
-                place__inventory__item__name__icontains=query,
-                place__inventory__item__type='medicine'
-            )
-
-        # 🏥 PROCEDURE SEARCH
-        elif search_type == 'procedure':
-            facilities = facilities.filter(
-                procedureprovided__procedure__name__icontains=query
-            )
-
-        facilities = facilities.distinct()
-
-        # 🔥 SERIALIZE MANUALLY
-        data = []
-        for f in facilities:
-            place = f.place
-
-            data.append({
-                "id": f.place_id,
-                "name": f.name,
-                "type": f.type,
-                "address": f"{place.addr_l1}, {place.city}, {place.state}",
-                "latitude": float(place.latitude),
-                "longitude": float(place.longitude),
-            })
-
-        return Response(data)
-
-    except Exception as e:
-        return Response({"error": str(e)}, status=400)
 
 @api_view(['POST'])
 def book_appointment(request):
