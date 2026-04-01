@@ -248,14 +248,14 @@ from datetime import timedelta
 def near_expiry(request, fac_id):
     cursor = connection.cursor()
     cursor.execute("""
-        SELECT i.name, inv.expiry
+        SELECT i.name, inv.expiry, inv.quantity
         FROM inventory inv
         JOIN item i ON inv.item_id = i.id
         WHERE inv.place_id = %s AND inv.expiry <= %s
     """, [fac_id, date.today() + timedelta(days=30)])
     
     rows = cursor.fetchall()
-    data = [{"item": row[0], "expiry": row[1]} for row in rows]
+    data = [{"item": row[0], "expiry": row[1], "quantity": row[2]} for row in rows]
     return Response(data)
 
 @api_view(['POST'])

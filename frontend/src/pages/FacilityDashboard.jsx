@@ -39,6 +39,7 @@ const FacilityDashboard = () => {
       
       const expiry = await facilityAPI.fetchNearExpiry(facilityId);
       setNearExpiry(expiry);
+      console.log(expiry);
     } catch (err) {
       console.error('Dashboard load failed:', err);
     } finally {

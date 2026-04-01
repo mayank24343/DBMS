@@ -9,6 +9,10 @@ const FacilityInventory = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
   const [filteredInventory, setFilteredInventory] = useState([]);
+  const [nearExpiry, setNearExpiry] = useState([]);
+  const [lowStock, setLowStock] = useState([]);
+  const lowStockItems = lowStock;
+  const expiredItems = nearExpiry;
 
   useEffect(() => {
     if (facilityId) {
@@ -17,37 +21,51 @@ const FacilityInventory = () => {
   }, [facilityId]);
 
   const loadInventory = async () => {
+    await Promise.all([
+      loadFilteredInventory('all'),
+      facilityAPI.fetchLowStock(facilityId).then(setLowStock),
+      facilityAPI.fetchNearExpiry(facilityId).then(setNearExpiry)
+    ]);
+  };
+
+  const loadFilteredInventory = async (tab) => {
     setLoading(true);
     try {
-      const data = await facilityAPI.fetchFullInventory(facilityId);
+      let data;
+      if (tab === 'low-stock') {
+        data = await facilityAPI.fetchLowStock(facilityId);
+      } else if (tab === 'expired') {
+        data = await facilityAPI.fetchNearExpiry(facilityId);
+      } else {
+        data = await facilityAPI.fetchFullInventory(facilityId);
+      }
       setInventory(data);
-      setFilteredInventory(data);
+      applySearchFilter(data);
     } catch (err) {
-      console.error('Inventory load failed:', err);
+      console.error('Filtered inventory load failed:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    let result = inventory;
-
-    // Search filter
+  const applySearchFilter = (items) => {
     if (search) {
-      result = result.filter(item => 
-        item.item.toLowerCase().includes(search.toLowerCase())
+      const filtered = items.filter(item => 
+        item.item?.toLowerCase().includes(search.toLowerCase())
       );
+      setFilteredInventory(filtered);
+    } else {
+      setFilteredInventory(items);
     }
+  };
 
-    // Tab filter
-    if (activeTab === 'low-stock') {
-      result = result.filter(item => item.quantity < item.threshold);
-    } else if (activeTab === 'expired') {
-      result = result.filter(item => new Date(item.expiry) < new Date());
-    }
+  useEffect(() => {
+    loadFilteredInventory(activeTab);
+  }, [activeTab]);
 
-    setFilteredInventory(result);
-  }, [search, activeTab, inventory]);
+  useEffect(() => {
+    applySearchFilter(inventory);
+  }, [search]);
 
   if (loading) {
     return (
@@ -57,8 +75,7 @@ const FacilityInventory = () => {
     );
   }
 
-  const expiredItems = inventory.filter(item => new Date(item.expiry) < new Date());
-  const lowStockItems = inventory.filter(item => item.quantity < item.threshold);
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-gray-50 py-12">
@@ -83,7 +100,7 @@ const FacilityInventory = () => {
             <div className="bg-gradient-to-r from-red-500 to-rose-600 text-white p-8 rounded-3xl shadow-2xl flex items-center gap-4">
               <AlertCircle className="w-12 h-12 flex-shrink-0" />
               <div>
-                <h3 className="text-2xl font-bold mb-2">{expiredItems.length} Items Near Expiry</h3>
+                <h3 className="text-2xl font-bold mb-2">{nearExpiry.length} Items Near Expiry</h3>
                 
               </div>
             </div>
@@ -92,7 +109,7 @@ const FacilityInventory = () => {
             <div className="bg-gradient-to-r from-orange-500 to-amber-600 text-white p-8 rounded-3xl shadow-2xl flex items-center gap-4">
               <AlertCircle className="w-12 h-12 flex-shrink-0" />
               <div>
-                <h3 className="text-2xl font-bold mb-2">{lowStockItems.length} Low Stock</h3>
+                <h3 className="text-2xl font-bold mb-2">{lowStock.length} Low Stock</h3>
                 
               </div>
             </div>
@@ -164,13 +181,15 @@ const FacilityInventory = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredInventory.map((item) => {
-                  const expiryDate = new Date(item.expiry);
-                  const isExpired = expiryDate < new Date();
-                  const isLowStock = item.quantity < item.threshold;
+{filteredInventory.map((item, index) => {
+                  const expiryDate = item.expiry ? new Date(item.expiry) : null;
+                  const isExpired = expiryDate && expiryDate < new Date();
+                  const itemQuantity = item.quantity !== undefined ? item.quantity : 'N/A';
+                  const itemThreshold = item.threshold !== undefined ? item.threshold : 'N/A';
+                  const isLowStock = item.quantity !== undefined && item.threshold !== undefined ? item.quantity < item.threshold : false;
                   
                   return (
-                    <tr key={item.id} className={`hover:bg-gray-50 transition-colors group/item`}>
+                    <tr key={item.id || index} className={`hover:bg-gray-50 transition-colors group/item`}>
                       <td className="px-8 py-6 font-semibold text-gray-900 max-w-md truncate">
                         {item.item}
                       </td>
@@ -178,11 +197,11 @@ const FacilityInventory = () => {
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${
                           isLowStock ? 'bg-orange-100 text-orange-800' : 'bg-emerald-100 text-emerald-800'
                         }`}>
-                          {item.quantity}
+                          {itemQuantity}
                         </span>
                       </td>
                       <td className="px-6 py-6 text-right font-mono text-sm text-gray-500">
-                        {item.threshold}
+                        {itemThreshold}
                       </td>
                       <td className="px-6 py-6 text-center">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${
@@ -244,8 +263,8 @@ const FacilityInventory = () => {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  {lowStockItems.slice(0, 6).map(item => (
-                    <div key={item.id} className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                  {lowStock.slice(0, 6).map((item, index) => (
+                    <div key={item.id || index} className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
                       <div className="font-bold text-lg">{item.quantity}/{item.threshold}</div>
                       <div className="text-sm opacity-90">{item.item}</div>
                     </div>
@@ -263,8 +282,8 @@ const FacilityInventory = () => {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  {expiredItems.slice(0, 6).map(item => (
-                    <div key={item.id} className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                  {nearExpiry.slice(0, 6).map((item, index) => (
+                    <div key={item.id || index} className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
                       <div className="text-sm opacity-90">{item.item}</div>
                     </div>
                   ))}
