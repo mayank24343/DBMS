@@ -3,6 +3,7 @@ from .views import (
     # basic
     get_facility,
     facility_contacts,
+    get_citizen,
 
     # wards / occupancy
     get_ward_availability,
@@ -50,6 +51,9 @@ urlpatterns = [
     path('wards/<int:fac_id>/', get_ward_availability, name='ward-availability'),
     path('facility/<int:fac_id>/occupancy/', facility_occupancy, name='facility-occupancy'),
 
+    path('facility/get-patient/<int:patient_id>', get_citizen, name='get-patient'),
+    
+
     # ================= APPOINTMENTS =================
     path('facility/<int:fac_id>/appointments/today/', today_appointments, name='today-appointments'),
 
@@ -76,6 +80,7 @@ urlpatterns = [
     # patients + inventory
     path('facility/<int:fac_id>/patients/admitted/', admitted_patients),
     path('facility/<int:fac_id>/inventory/low/', low_inventory),
+    
 
     # disease analytics
     path('stats/disease/<int:disease_id>/geo/', disease_geo),

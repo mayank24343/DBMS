@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { citizenAPI } from '../services/api';
+import { facilityAPI } from '../services/api';
 import { Activity, Hospital, Calendar, ChevronRight } from 'lucide-react';
 
-const MedicalHistory = ({ citizenId }) => {
+const FacilityAppointment = () => {
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
+    const facilityId = localStorage.getItem('facility_id');
 
     useEffect(() => {
-        citizenAPI.medicalHistory(citizenId)
+        facilityAPI.currentAppointments(facilityId)
             .then(data => {
                 setHistory(data);
                 setLoading(false);
@@ -17,7 +18,7 @@ const MedicalHistory = ({ citizenId }) => {
                 console.error("Failed to fetch history:", err);
                 setLoading(false);
             });
-    }, [citizenId]);
+    }, [facilityId]);
 
     if (loading) {
         return (
@@ -36,31 +37,24 @@ const MedicalHistory = ({ citizenId }) => {
                         <Activity className="text-blue-600 w-8 h-8" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900">Medical History</h1>
-                        <p className="text-sm font-medium text-gray-500 mt-1">Citizen ID: {citizenId}</p>
+                        <h1 className="text-3xl font-extrabold text-gray-900">Appointments Today</h1>
+                        <p className="text-sm font-medium text-gray-500 mt-1">Facility ID: {facilityId}</p>
                     </div>
                 </div>
                 
-                {/* NEW BOOKING BUTTON */}
-                <Link 
-                    to="/book/appointment/"
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2"
-                >
-                    <Calendar className="w-5 h-5" /> Book Appointment
-                </Link>
             </div>
 
             {/* Content Section */}
             {history.length === 0 ? (
                 <div className="bg-gray-50 rounded-xl p-10 text-center text-gray-500 border-2 border-dashed border-gray-300">
-                    No medical history found for this citizen.
+                    No appointments found for today.
                 </div>
             ) : (
                 <div className="space-y-4">
                     {history.map((visit) => (
                         <Link 
-                            to={`/visit/${visit.id}`} 
-                            key={visit.id} 
+                            to={`/visit/${visit.visit_id}`} 
+                            key={visit.visit_id} 
                             className="block group bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md hover:border-blue-400 transition-all duration-200 relative pr-12"
                         >
                             <div className="flex justify-between items-start mb-3">
@@ -104,4 +98,4 @@ const MedicalHistory = ({ citizenId }) => {
     );
 };
 
-export default MedicalHistory;
+export default FacilityAppointment;

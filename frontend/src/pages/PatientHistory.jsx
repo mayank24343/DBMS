@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { citizenAPI } from '../services/api';
 import { Activity, Hospital, Calendar, ChevronRight } from 'lucide-react';
+import { useParams } from 'react-router-dom';
 
-const MedicalHistory = ({ citizenId }) => {
+const PatientHistory = () => {
+    const citizenId = useParams().citizenId;
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -36,18 +38,11 @@ const MedicalHistory = ({ citizenId }) => {
                         <Activity className="text-blue-600 w-8 h-8" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900">Medical History</h1>
+                        <h1 className="text-3xl font-extrabold text-gray-900">Patient Medical History</h1>
                         <p className="text-sm font-medium text-gray-500 mt-1">Citizen ID: {citizenId}</p>
                     </div>
                 </div>
-                
-                {/* NEW BOOKING BUTTON */}
-                <Link 
-                    to="/book/appointment/"
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2"
-                >
-                    <Calendar className="w-5 h-5" /> Book Appointment
-                </Link>
+            
             </div>
 
             {/* Content Section */}
@@ -104,4 +99,4 @@ const MedicalHistory = ({ citizenId }) => {
     );
 };
 
-export default MedicalHistory;
+export default PatientHistory;

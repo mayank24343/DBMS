@@ -14,6 +14,14 @@ import VaccinationHistory from './pages/VaccinationHistory';
 import CitizenDashboard from './pages/CitizenDashboard';
 import EligibleVaccines from './pages/EligibleVaccines';
 import UpcomingAppointments from './pages/UpcomingAppointments';
+import FacilityWards from './pages/FacilityWards';
+import FacilityAdmitted from './pages/FacilityAdmitted';
+import PatientDetails from './pages/PatientDetails';
+import PatientHistory from './pages/PatientHistory';
+import PatientVaccinationHistory from './pages/PatientVaccinationHistory';
+import PatientEligibleVaccines from './pages/PatientEligibleVaccines';
+import FacilityInventory from './pages/FacilityInventory';
+import FacilityAppointment from './pages/FacilityAppointment';
 
 function CitizenWrapper() {
   const { aadharNo } = useParams();
@@ -46,10 +54,10 @@ function App() {
               <div className="hidden md:flex space-x-6 text-sm font-semibold text-blue-200">
                 <Link to="/directory" className="hover:text-blue-200 transition-colors">Service Directory</Link>
                 {currentUser.role === 'citizen' && (
-                  <Link to={`/citizen/dashboard`} className="hover:text-white transition-colors">My Records</Link>
+                  <Link to={`/citizen/dashboard`} className="hover:text-white transition-colors">My Dashboard</Link>
                 )}
                 {currentUser.role === 'worker' && (
-                  <Link to={`/facility/${currentUser.id}`} className="hover:text-white transition-colors">Facility Command</Link>
+                  <Link to={`/facility-dashboard`} className="hover:text-white transition-colors">Facility Command</Link>
                 )}
                 {currentUser.role === 'admin' && (
                   <Link to="/admin" className="hover:text-white transition-colors">Dept of Health Admin</Link>
@@ -70,7 +78,7 @@ function App() {
             <Routes>
               
               <Route path="/visit/:visitId" element={<VisitDetails />} />
-              <Route path="/facility/:facId" element={<FacilityDashboard />} />
+      
               
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/directory" element={<ServiceDirectory />} />
@@ -82,6 +90,15 @@ function App() {
               <Route path="/eligible/vaccines" element={<EligibleVaccines citizenId={currentUser.id}/>} />
               <Route path='/medical/history' element={<MedicalHistory citizenId={currentUser.id} />} />
                <Route path='/upcoming' element={<UpcomingAppointments citizenId={currentUser.id} />} />
+               <Route path='/wards' element={<FacilityWards />} />
+               <Route path='/facility-admitted' element={<FacilityAdmitted />} />
+               <Route path='/patient-details/:patientId' element={<PatientDetails />} />
+               <Route path='/patient/history/:citizenId' element={<PatientHistory />} />
+               <Route path='/patient/vaccination/:citizenId' element={<PatientVaccinationHistory />} />
+               <Route path='/patient/vaccination/eligible/:citizenId' element={<PatientEligibleVaccines />} />
+               <Route path='/inventory' element={<FacilityInventory />} />
+               <Route path='/facility-appointments' element={<FacilityAppointment />} />
+              
               
               {/* Fallback route if they type a bad URL */}
               <Route path="*" element={<Navigate to="/" replace />} />

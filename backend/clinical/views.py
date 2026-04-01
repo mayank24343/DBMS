@@ -319,8 +319,8 @@ def book_appointment(request):
     if not citizen_id:
         return Response({"error": "Citizen ID is required"}, status=400)
     cursor.execute("""
-        INSERT INTO visit (citizen_id, centre_id, visit_date, reason)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO visit (citizen_id, centre_id, visit_date, reason, status)
+        VALUES (%s, %s, %s, %s, pending)
     """, [citizen_id, data['facility_id'], data['appointment_date'], f"{data['reason']}"])
     
     visit_id = cursor.lastrowid

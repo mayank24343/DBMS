@@ -57,7 +57,7 @@ def today_appointments(request, fac_id):
     cursor = connection.cursor()
     today = date.today()
     cursor.execute("""
-        SELECT v.id, v.citizen_id, c.name, v.reason
+        SELECT v.id, v.citizen_id, c.name, v.reason, v.visit_date
         FROM visit v
         JOIN citizen c ON v.citizen_id = c.citizen_id
         WHERE v.centre_id = %s AND v.visit_date = %s
@@ -69,7 +69,8 @@ def today_appointments(request, fac_id):
             "visit_id": row[0],
             "citizen_id": row[1],
             "name": row[2],
-            "reason": row[3]
+            "reason": row[3],
+            "visit_date": row[4],
         } for row in rows
     ]
     return Response(data)
@@ -113,6 +114,42 @@ def facility_occupancy(request, fac_id):
         "occupied": occupied,
         "vacant": total - occupied
     })
+
+@api_view(['GET'])
+def ward_admitted_patients(request, fac_id):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT a.citizen_id, c.name, a.admission_date
+        FROM admission a
+        JOIN citizen c ON a.citizen_id = c.citizen_id
+        WHERE a.ward_id = %s AND a.discharge_date IS NULL
+    """, [fac_id])
+    
+    rows = cursor.fetchall()
+    data = [
+        {
+            "citizen_id": row[0],
+            "name": row[1],
+            "admission_date": row[2]
+        } for row in rows
+    ]
+    return Response(data)
+
+@api_view(['GET'])
+def get_citizen(request, citizen_id):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT citizen_id, name, age, gender
+        FROM citizen
+        WHERE citizen_id = %s   
+    """, [citizen_id])
+    return Response({
+        "citizen_id": citizen_id,
+        "name": cursor.fetchone()[1],
+        "age": cursor.fetchone()[2],
+        "gender": cursor.fetchone()[3]
+    })
+
 
 @api_view(['GET'])
 def citizen_history(request, citizen_id):

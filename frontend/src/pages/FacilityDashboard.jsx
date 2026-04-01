@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { facilityAPI } from '../services/api';
-import { Hospital, Users, TrendingUp, ClipboardList, Syringe, FileText, ShoppingCart, AlertCircle } from 'lucide-react';
+import { Hospital, Users, TrendingUp, ClipboardList, Syringe, FileText, ShoppingCart, AlertCircle, Calendar, MapPin } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const FacilityDashboard = () => {
   const [occupancy, setOccupancy] = useState(null);
@@ -9,7 +10,8 @@ const FacilityDashboard = () => {
   const [nearExpiry, setNearExpiry] = useState([]);
   const [loading, setLoading] = useState(true);
   const facilityId = localStorage.getItem('facility_id');
-
+  const [facility, setFacility] = useState({});
+  console.log('Loaded Facility ID:', facilityId);
   useEffect(() => {
     if (facilityId) {
       loadDashboardData();
@@ -19,19 +21,23 @@ const FacilityDashboard = () => {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
+      // Facility details
+      const facilityData = await facilityAPI.getFacility(facilityId);
+      setFacility(facilityData);
+      
       // Occupancy
-      const occData = await fetchOccupancy(facilityId);
+      const occData = await facilityAPI.fetchOccupancy(facilityId);
       setOccupancy(occData);
       
       // Today's appointments
-      const appts = await fetchAppointments(facilityId);
+      const appts = await facilityAPI.fetchAppointments(facilityId);
       setAppointments(appts);
       
       // Inventory alerts
-      const low = await fetchLowStock(facilityId);
+      const low = await facilityAPI.fetchLowStock(facilityId);
       setLowStock(low);
       
-      const expiry = await fetchNearExpiry(facilityId);
+      const expiry = await facilityAPI.fetchNearExpiry(facilityId);
       setNearExpiry(expiry);
     } catch (err) {
       console.error('Dashboard load failed:', err);
@@ -41,48 +47,36 @@ const FacilityDashboard = () => {
   };
 
   // Mock API calls - replace with real endpoints
-  const fetchOccupancy = async (facId) => {
-    const res = await fetch(`http://127.0.0.1:8000/facilities/api/occupancy/${facId}/`);
-    return res.json();
-  };
-
-  const fetchAppointments = async (facId) => {
-    const res = await fetch(`http://127.0.0.1:8000/facilities/api/appointments/${facId}/today/`);
-    return res.json();
-  };
-
-  const fetchLowStock = async (facId) => {
-    const res = await fetch(`http://127.0.0.1:8000/inventory/api/low-stock/${facId}/`);
-    return res.json();
-  };
-
-  const fetchNearExpiry = async (facId) => {
-    const res = await fetch(`http://127.0.0.1:8000/inventory/api/near-expiry/${facId}/`);
-    return res.json();
-  };
-
+  
   if (loading) return <div>Loading dashboard...</div>;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-4">
-            <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg">
-              <Hospital className="w-10 h-10 text-white" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-black bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                Facility Dashboard
-              </h1>
-              <p className="text-xl text-gray-600">Facility ID: {facilityId}</p>
+        {/* Facility Header */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg">
+                <Hospital className="w-10 h-10 text-white" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-black bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  {facility.name || 'Facility Dashboard'}
+                </h1>
+                <p className="text-xl text-gray-600">ID: {facilityId} • {facility.type || 'Hospital'} • {facility.city || 'N/A'} • {facility.state || 'N/A'}</p>
+            
+              </div>
             </div>
           </div>
+
+          
         </div>
 
         {/* Stats Grid */}
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <Link to ="/wards">
           <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-red-100 rounded-2xl">
@@ -92,10 +86,12 @@ const FacilityDashboard = () => {
                 <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Occupancy</p>
               </div>
             </div>
-            <div className="text-4xl font-black text-gray-900">{occupancy?.occupied || 0}/{occupancy?.total || 0}</div>
+            <div className="text-4xl font-black text-gray-900">{occupancy?.occupied || 0}/{occupancy?.total_beds || 0}</div>
             <div className="text-green-600 font-bold text-xl">{occupancy?.vacant || 0} beds available</div>
           </div>
+          </Link>
 
+          <Link to="/facility-appointments">
           <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-blue-100 rounded-2xl">
@@ -108,7 +104,9 @@ const FacilityDashboard = () => {
             <div className="text-4xl font-black text-gray-900">{appointments.length}</div>
             <div className="text-blue-600 font-bold text-xl">Patients scheduled</div>
           </div>
+          </Link>
 
+          <Link to="/inventory">
           <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-orange-100 rounded-2xl">
@@ -121,7 +119,9 @@ const FacilityDashboard = () => {
             <div className="text-4xl font-black text-gray-900">{lowStock.length}</div>
             <div className="text-orange-600 font-bold text-xl">Needs reordering</div>
           </div>
+          </Link>
 
+          <Link to="/inventory">
           <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-yellow-100 rounded-2xl">
@@ -134,7 +134,9 @@ const FacilityDashboard = () => {
             <div className="text-4xl font-black text-gray-900">{nearExpiry.length}</div>
             <div className="text-yellow-600 font-bold text-xl">Check inventory</div>
           </div>
+          </Link>
         </div>
+        
 
         {/* Action Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
@@ -163,50 +165,7 @@ const FacilityDashboard = () => {
           </div>
         </div>
 
-        {/* Create Visit Modal */}
-        {showCreateVisit && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl p-8 max-w-md w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">New Visit</h2>
-                <button onClick={() => setShowCreateVisit(false)} className="text-gray-500 hover:text-gray-700">
-                  ×
-                </button>
-              </div>
-              <form onSubmit={handleCreateVisit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Citizen ID/Aadhar</label>
-                  <input
-                    type="text"
-                    value={newVisit.citizenId}
-                    onChange={(e) => setNewVisit({...newVisit, citizenId: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter citizen ID or aadhar"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Reason</label>
-                  <textarea
-                    rows="3"
-                    value={newVisit.reason}
-                    onChange={(e) => setNewVisit({...newVisit, reason: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 resize-vertical"
-                    placeholder="Symptoms or reason for visit"
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Creating...' : 'Create Visit'}
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
+        
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

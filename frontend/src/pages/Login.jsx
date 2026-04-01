@@ -58,18 +58,32 @@ const Login = ({onLogin}) => {
             }
 
             else if (data.role === "worker") {
+                console.log('Worker login successful:', data);
                 localStorage.setItem("worker_id", data.worker_id);
+                localStorage.setItem("facility_id", data.facility_id);
+                onLogin({
+                    role: "worker",
+                    id: data.worker_id,
+                    fac_id: data.facility_id
+                });
 
                 // 🔥 IMPORTANT: worker → facility
-                navigate(`/facility/${data.facility_id}`);
+                navigate(`/facility-dashboard`);
             }
 
             else if (data.role === "supplier") {
                 localStorage.setItem("supplier_id", data.supplier_id);
+                onLogin({
+                    role: "supplier",
+                    id: data.supplier_id
+                });
                 navigate(`/supplier/${data.supplier_id}`);
             }
 
             else if (data.role === "admin") {
+                onLogin({
+                    role: "admin",
+                });
                 navigate("/admin");
             }
 
