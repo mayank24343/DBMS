@@ -288,21 +288,40 @@ def assign_worker(request):
 def get_facility_workers(request, fac_id):
     cursor = connection.cursor()
     cursor.execute("""
-        SELECT w.worker_id, hw.id as user_id, hw.name, hw.role
+        SELECT w.worker_id, hw.id as user_id, hw.name, hw.role, s.name
         FROM works w
         JOIN healthcareworker hw ON w.worker_id = hw.id
+                   JOIN skills s ON hw.id = s.worker_id
         WHERE w.fac_id = %s AND w.end_date IS NULL
     """, [fac_id])
     
     rows = cursor.fetchall()
-    data = [
-        {
-            "worker_id": row[1],
-            "name": row[2],
-            "role": row[3]
-        }
-        for row in rows
-    ]
+    
+    # Use a dictionary to group everything by worker_id temporarily
+    workers_dict = {}
+    
+    for row in rows:
+        worker_id = row[1]
+        name = row[2]
+        role = row[3]
+        skill = row[4]
+        
+        # If we haven't seen this worker yet, create their entry
+        if worker_id not in workers_dict:
+            workers_dict[worker_id] = {
+                "worker_id": worker_id,
+                "name": name,
+                "role": role,
+                "skills": [] # Start with an empty list for skills
+            }
+            
+        # Append the skill to the worker's skills list (checking if it's not None)
+        if skill:
+            workers_dict[worker_id]["skills"].append(skill)
+            
+    # Convert the grouped dictionary values back into the final list format
+    data = list(workers_dict.values())
+
     return Response(data)
 
 @api_view(['GET'])

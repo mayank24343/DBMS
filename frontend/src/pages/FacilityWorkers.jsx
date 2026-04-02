@@ -131,7 +131,7 @@ const FacilityWorkers = () => {
                     <th className="px-8 py-6 text-left text-lg font-bold text-gray-900">Worker ID</th>
                     <th className="px-8 py-6 text-left text-lg font-bold text-gray-900">Name</th>
                     <th className="px-6 py-6 text-center text-lg font-bold text-gray-900">Role</th>
-                    <th className="px-6 py-6 text-right text-lg font-bold text-gray-900">Actions</th>
+                    <th className="px-6 py-6 text-right text-lg font-bold text-gray-900">Qualifications</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -148,15 +148,11 @@ const FacilityWorkers = () => {
                           {worker.role}
                         </span>
                       </td>
+                      
                       <td className="px-6 py-6 text-right">
-                        <div className="flex gap-2 justify-end">
-                          <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all">
-                            Details
-                          </button>
-                          <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all">
-                            Edit
-                          </button>
-                        </div>
+                        <span className="inline-flex items-center px-4 py-2 rounded-full bg-purple-100 text-purple-800 font-bold text-sm">
+                          {worker.skills[0] || 'No skills listed'} {worker.skills[1] || ''}
+                        </span>
                       </td>
                     </tr>
                   ))}
