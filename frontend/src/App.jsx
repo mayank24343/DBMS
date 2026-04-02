@@ -32,6 +32,10 @@ import AddProcedure from './pages/AddProcedure';
 import CurrentPatients from './pages/CurrentPatients';
 import TransferPatient from './pages/TransferPatient';
 import AddVaccination from './pages/AddVaccination';
+import LogUsage from './pages/LogUsage';
+import AvailableFacilities from './pages/AvailableFacilities';
+import BestSupplier from './pages/BestSupplier';
+import FacilityWorkers from './pages/FacilityWorkers';
 
 function CitizenWrapper() {
   const { aadharNo } = useParams();
@@ -63,6 +67,12 @@ function App() {
               
               <div className="hidden md:flex space-x-6 text-sm font-semibold text-blue-200">
                 <Link to="/directory" className="hover:text-blue-200 transition-colors">Service Directory</Link>
+                {currentUser.role === 'admin' && (
+                  <Link to="/available-facilities" className="hover:text-blue-200 transition-colors">Available Facilities</Link>
+                )}
+                {(currentUser.role === 'admin' || currentUser.role === 'worker') && (
+                  <Link to="/best-supplier" className="hover:text-blue-200 transition-colors">Item Suppliers</Link>
+                )}
                 {currentUser.role === 'citizen' && (
                   <Link to={`/citizen/dashboard`} className="hover:text-white transition-colors">My Dashboard</Link>
                 )}
@@ -71,6 +81,9 @@ function App() {
                 )}
                 {currentUser.role === 'admin' && (
                   <Link to="/admin" className="hover:text-white transition-colors">Dept of Health Admin</Link>
+                )}
+                {currentUser.role === 'admin' && (
+                  <Link to="/fac-workers" className="hover:text-white transition-colors">Facility Workers</Link>
                 )}
               </div>
             </div>
@@ -118,10 +131,15 @@ function App() {
                <Route path='/transfer/:visitId' element={<TransferPatient />} />
 <Route path='/vaccination/:visitId' element={<AddVaccination />} />
                <Route path='/current-patients' element={<CurrentPatients />} />
-              
+               <Route path='/log-usage' element={<LogUsage />} />
+               <Route path='/best-supplier' element={<BestSupplier />} />
+               <Route path='/facility-workers' element={<FacilityWorkers />} />
               
               {/* Fallback route if they type a bad URL */}
               <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="/available-facilities" element={<AvailableFacilities />} />
+              <Route path="/best-supplier" element={<BestSupplier />} />
+              <Route path="/fac-workers" element={<FacilityWorkers />} />
             </Routes>
           </main>
 

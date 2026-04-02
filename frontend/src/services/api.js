@@ -98,7 +98,29 @@ export const facilityAPI = {
     const response = await api.get(`api/facility/get-current-patient/${facId}`);
     return response.data; 
   },
-    
+
+  logUsage: async (item_id, facility_id, quantity) => {
+    const response = await api.post('api/log-usage/', { item_id, facility_id, quantity });
+    return response.data;
+  },
+
+  getBestSuppliers: async (item_id, required_qty) => {
+    const response = await api.post('api/get_best_suppliers/', { item_id, required_qty });
+    return response.data;
+  },
+
+  getAllItems: async () => {
+    const response = await api.get('api/all-items/');
+    return response.data;
+  },
+  getFacilityWorkers: async (facId) => {
+    const response = await api.get(`api/facility/${facId}/workers/`);
+    return response.data;
+  },
+  getAllFacilities: async () => {
+    const response = await api.get('api/all-facilities/');
+    return response.data;
+  }
 };
 
 export const getLowStockAlerts = async (facId) => {

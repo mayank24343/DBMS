@@ -277,30 +277,81 @@ def search_facilities(request):
 
 
 @api_view(['GET'])
-def available_facilities(request):
+def available_facilities_state(request):
     state = request.GET.get('state')
-    city = request.GET.get('city')
 
     cursor = connection.cursor()
     cursor.execute("""
-        SELECT hf.id, hf.name, (COALESCE(SUM(w.total), 0) - COALESCE(SUM(w.occupied), 0)) as vacant_beds
+        SELECT hf.id, hf.name, (COALESCE(SUM(w.total), 0) - COALESCE(SUM(w.occupied), 0)) as vacant_beds, p.city, p.state
         FROM health_facility hf
         JOIN place p ON hf.id = p.id
         LEFT JOIN wards w ON hf.id = w.facility_id
-        WHERE p.state = %s AND p.city = %s
+        WHERE p.state = %s
         GROUP BY hf.id, hf.name
         HAVING (COALESCE(SUM(w.total), 0) - COALESCE(SUM(w.occupied), 0)) > 0
-    """, [state, city])
+    """, [state])
     
     rows = cursor.fetchall()
     data = [
         {
             "id": row[0],
             "name": row[1],
-            "vacant_beds": row[2]
+            "vacant_beds": row[2],
+            "city": row[3],
+            "state": row[4]
         } for row in rows
     ]
     return Response(data)
+
+@api_view(['GET'])
+def available_facilities_city(request):
+    
+    city = request.GET.get('city')
+
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT hf.id, hf.name, (COALESCE(SUM(w.total), 0) - COALESCE(SUM(w.occupied), 0)) as vacant_beds, p.city, p.state
+        FROM health_facility hf
+        JOIN place p ON hf.id = p.id
+        LEFT JOIN wards w ON hf.id = w.facility_id
+        WHERE p.city = %s
+        GROUP BY hf.id, hf.name
+        HAVING (COALESCE(SUM(w.total), 0) - COALESCE(SUM(w.occupied), 0)) > 0
+    """, [ city])
+    
+    rows = cursor.fetchall()
+    data = [
+        {
+            "id": row[0],
+            "name": row[1],
+            "vacant_beds": row[2],
+            "city": row[3],
+            "state": row[4]
+        } for row in rows
+    ]
+    return Response(data)
+
+@api_view(['GET'])
+def get_states(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT DISTINCT state FROM place
+    """)
+    
+    rows = cursor.fetchall()
+    data = [row[0] for row in rows]
+    return Response(data)
+
+@api_view(['GET'])
+def get_cities(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT DISTINCT city FROM place
+    """)
+    
+    rows = cursor.fetchall()
+    data = [row[0] for row in rows]
+    return  Response(data)
 
 # ==========================================
 # WRITE DATA (POST REQUESTS)
@@ -563,4 +614,5 @@ def create_vaccination(request, visit_id):
         VALUES (%s, %s, %s, %s, %s)
     """, [request.data['citizen_id'], request.data['item_id'], request.data['dose_number'], request.data['centre_id'], date.today()])
     return Response({"status": "vaccination recorded"})
+
 

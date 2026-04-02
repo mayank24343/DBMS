@@ -1,21 +1,20 @@
-# AddLabOrders.jsx Implementation Complete ✅
+# Log Usage Feature Implementation
 
-## Steps:
-- [x] 1. Create/Update AddLabOrders.jsx with full component (structure from AddDiagnosis.jsx)
-- [x] 2. Implement states and useEffects (labTests, visitInfo, facilitiesForTest etc.)
-- [x] 3. Add fetch functions (fetchLabTests, fetchVisitInfo, searchFacilitiesForTest)
-- [x] 4. Build form UI (visit display, test select, facilities list, notes, submit)
-- [x] 5. Handle submit POST to /clinical/api/laborder/${visitId}/
-- [x] 6. Add success screen and loading states
-- [x] 7. Test and attempt_completion
+## Steps Completed
+- [x] 1. Create TODO.md with implementation plan
+- [x] 2. Update frontend/src/services/api.js - Add logUsage endpoint to facilityAPI
+- [x] 3. Update frontend/src/App.jsx - Add route for /log-usage
+- [x] 4. Create full frontend/src/pages/LogUsage.jsx implementation (load inventory, form, validation, log usage)
+- [x] 5. Update frontend/src/pages/FacilityInventory.jsx - Add navigation links on "Log Usage" buttons
 
-**All steps complete.** AddLabOrders.jsx created for visitId route, handles one lab test at a time, loads facilities via search API on test select, creates order via backend endpoint.
-- [ ] 2. Implement states and useEffects (labTests, visitInfo, facilitiesForTest etc.)
-- [ ] 3. Add fetch functions (fetchLabTests, fetchVisitInfo, searchFacilitiesForTest)
-- [ ] 4. Build form UI (visit display, test select, facilities list, notes, submit)
-- [ ] 5. Handle submit POST to /clinical/api/laborder/${visitId}/
-- [ ] 6. Add success screen and loading states
-- [ ] 7. Test and attempt_completion
+## Steps Completed
+- [x] 1. Create TODO.md with implementation plan
+- [x] 2. Update frontend/src/services/api.js - Add logUsage endpoint to facilityAPI
+- [x] 3. Update frontend/src/App.jsx - Add route for /log-usage
+- [x] 4. Create full frontend/src/pages/LogUsage.jsx implementation (load inventory, form, validation, log usage)
+- [x] 5. Update frontend/src/pages/FacilityInventory.jsx - Add navigation links on "Log Usage" buttons
+- [x] 6. Test functionality (login worker → /log-usage → log usage → verify stock update)
 
-Current: Starting implementation.
+Log Usage page fully implemented with inventory logging, stock validation (cannot exceed current quantity), search/filter, FacilityInventory navigation buttons. Backend integration via existing log_usage API. Ready for use by facility workers.
 
+To test: Login as facility worker → Inventory (/inventory) → Click "Log Usage →" → Enter quantity ≤ stock → Log → Verify stock decreases.

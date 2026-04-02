@@ -48,7 +48,10 @@ def manual_purchase(request):
     """, [request.data['supplier_id'], request.data['facility_id'], request.data['item_id'], request.data['quantity'], date.today()])
     return Response({"status": "ordered"})
 
-def get_best_suppliers(item_id, required_qty):
+@api_view(['POST'])
+def get_best_suppliers(request):
+    item_id = request.data['item_id']
+    required_qty = request.data['required_qty']
     cursor = connection.cursor()
     cursor.execute("""
         SELECT supplier_id, quantity, price_per_item
@@ -59,23 +62,21 @@ def get_best_suppliers(item_id, required_qty):
     
     listings = cursor.fetchall()
     result = []
-    remaining = required_qty
+    
 
     for l in listings:
         supplier_id, l_qty, price = l
-        take = min(l_qty, remaining)
+        
 
         result.append({
             "supplier_id": supplier_id,
-            "quantity": take,
+            "quantity": l_qty,
             "price": price
         })
 
-        remaining -= take
-        if remaining == 0:
-            break
+       
 
-    return result
+    return Response(result)
 
 @api_view(['POST'])
 def request_item(request):
@@ -139,3 +140,28 @@ def request_from_warehouse(request):
         return Response({"status": "insufficient, trigger purchase"})
     
     
+@api_view(['POST'])
+def log_usage(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO item_use (item_id, fac_id, use_date, quantity)
+        VALUES (%s, %s, %s, %s)
+    """, [request.data['item_id'], request.data['facility_id'], date.today(), request.data['quantity']])
+
+    # Decrease inventory
+    cursor.execute("""
+        UPDATE inventory 
+        SET quantity = quantity - %s 
+        WHERE place_id = %s AND item_id = %s
+    """, [request.data['quantity'], request.data['facility_id'], request.data['item_id']])  
+
+    return Response({"status": "usage logged"})
+
+@api_view(['GET'])
+def get_all_items(request):
+    cursor = connection.cursor()
+    cursor.execute("SELECT id, name FROM item")
+    rows = cursor.fetchall()
+    data = [{"id": row[0], "name": row[1]} for row in rows]
+
+    return Response(data)

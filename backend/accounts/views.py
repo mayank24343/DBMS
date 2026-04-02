@@ -305,6 +305,25 @@ def get_facility_workers(request, fac_id):
     ]
     return Response(data)
 
+@api_view(['GET'])
+def get_all_facilities(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT id, name, type
+        FROM health_facility
+    """)
+    
+    rows = cursor.fetchall()
+    data = [
+        {
+            "id": row[0],
+            "name": row[1],
+            "type": row[2]
+        }
+        for row in rows
+    ]
+    return Response(data)
+
 @api_view(['POST'])
 def unassign_worker(request):
     cursor = connection.cursor()

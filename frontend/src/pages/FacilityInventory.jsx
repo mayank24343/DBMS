@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { facilityAPI } from '../services/api';
 import { Package, AlertCircle, Clock, ShoppingCart, Filter } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const FacilityInventory = () => {
   const facilityId = localStorage.getItem('facility_id');
@@ -223,12 +224,16 @@ const FacilityInventory = () => {
                       </td>
                       <td className="px-8 py-6 text-right">
                         <div className="flex gap-2 justify-end">
-                          <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all">
-                            Reorder
-                          </button>
-                          <button className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all">
-                            Log Usage
-                          </button>
+                          <Link to="/best-supplier">
+                            <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all">
+                              Find Suppliers
+                            </button>
+                          </Link>
+                          <Link to="/log-usage">
+                            <button className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all">
+                              Log Usage →
+                            </button>
+                          </Link>
                         </div>
                       </td>
                     </tr>

@@ -1,7 +1,8 @@
 from django.urls import path
-from .views import  available_facilities, create_visit, create_diagnosis, book_appointment, current_appointments, current_prescriptions, eligible_vaccines, lab_reports, medical_history, search_facilities, visit_detail
+from .views import  create_visit, create_diagnosis, book_appointment, current_appointments, current_prescriptions, eligible_vaccines, lab_reports, medical_history, search_facilities, visit_detail
 from .views import get_facilities, vaccination_history
 from .views import get_all_diseases, get_lab_tests, get_procedures, get_medicines, create_prescription, create_lab_order, create_procedure, create_vaccination
+from .views import available_facilities_state, available_facilities_city, get_cities, get_states
     
 urlpatterns = [
     path('api/history/<int:citizen_id>/', medical_history),
@@ -14,7 +15,7 @@ urlpatterns = [
     path('api/visit/new/', create_visit),
 
     path('api/search/', search_facilities),
-    path('api/facilities/available/', available_facilities),
+
     path('api/current/prescriptions/<int:citizen_id>/', current_prescriptions),
     path('api/current/appointments/<int:citizen_id>/', current_appointments),
     
@@ -30,4 +31,9 @@ urlpatterns = [
     path('api/lab-tests/', get_lab_tests),
     path('api/procedures/', get_procedures),
     path('api/medicines/', get_medicines),
+
+    path('api/facilities/available/state/', available_facilities_state),
+    path('api/facilities/available/city/', available_facilities_city),
+    path('api/cities/', get_cities),
+    path('api/states/', get_states),
 ]
