@@ -76,8 +76,7 @@ FROM healthcareworker hw
 JOIN works w ON hw.id = w.worker_id
 JOIN skills s ON hw.id = s.worker_id
 WHERE w.fac_id = 1
-  AND w.end_date IS NULL
-  AND s.name = 'MBBS'; 
+  AND w.end_date IS NULL;
 
 -- 10 facilities offering a lab test 
 SELECT hf.name FROM health_facility hf
