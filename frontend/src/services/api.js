@@ -100,7 +100,7 @@ export const facilityAPI = {
   },
 
   logUsage: async (item_id, facility_id, quantity) => {
-    const response = await api.post('api/log-usage/', { item_id, facility_id, quantity });
+    const response = await api.post('api/facility/usage/', { item_id,  facility_id, quantity });
     return response.data;
   },
 

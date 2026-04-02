@@ -182,7 +182,7 @@ def visit_detail(request, id):
     """, [id])
     admission_rows = cursor.fetchall()
     if admission_rows:
-        data["admission"] = {"admission_date": admission_rows[0][0], "discharge_date": admission_rows[0][1], "ward": admission_rows[0][2]}
+        data["admission"] = [{"admission_date": admission_rows[0][0], "discharge_date": admission_rows[0][1], "ward": admission_rows[0][2]}]
     
     return Response(data)
 
@@ -208,7 +208,7 @@ def current_appointments(request, citizen_id):
         SELECT v.id, v.visit_date, hf.name, v.reason
         FROM visit v
         JOIN health_facility hf ON v.centre_id = hf.id
-        WHERE v.citizen_id = %s AND v.visit_date >= CURRENT_DATE and v.status = 'pending'
+        WHERE v.citizen_id = %s AND v.visit_date >= CURRENT_DATE and v.status = "pending"
         ORDER BY v.visit_date ASC
     """, [citizen_id])
     
@@ -371,7 +371,7 @@ def book_appointment(request):
         return Response({"error": "Citizen ID is required"}, status=400)
     cursor.execute("""
         INSERT INTO visit (citizen_id, centre_id, visit_date, reason, status)
-        VALUES (%s, %s, %s, %s, `pending`)
+        VALUES (%s, %s, %s, %s, "pending")
     """, [citizen_id, data['facility_id'], data['appointment_date'], f"{data['reason']}"])
     
     visit_id = cursor.lastrowid
@@ -442,6 +442,7 @@ def create_lab_order(request, visit_id):
 def create_procedure(request, visit_id):
     data = request.data
     cursor = connection.cursor()
+    
     if data.get('procedure_id'):
         cursor.execute("""
             INSERT INTO procedure_taken (visit_id, procedure_id)

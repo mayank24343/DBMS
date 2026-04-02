@@ -80,6 +80,16 @@ const Login = ({onLogin}) => {
                 navigate(`/supplier/${data.supplier_id}`);
             }
 
+            else if (data.role === "warehouse") {
+                localStorage.setItem("warehouse_id", data.id);
+                onLogin({
+                    role:"warehouse",
+                    id: data.id,
+                });
+                navigate(`/warehouse-dashboard/`)
+                
+            }
+
             else if (data.role === "admin") {
                 onLogin({
                     role: "admin",
@@ -120,12 +130,13 @@ const Login = ({onLogin}) => {
                     >
                         <option value="citizen">Citizen</option>
                         <option value="worker">Healthcare Worker</option>
-                        <option value="supplier">Supplier</option> {/* 🔥 FIX */}
+                        <option value="warehouse">Warehouse</option>
+                        <option value="supplier">Supplier</option>
                         <option value="admin">Admin</option>
                     </select>
 
                     {/* IDENTIFIER */}
-                    {role !== "admin" && (
+                    {role !== "admin"  && (
                         <input
                             type="text"
                             placeholder={

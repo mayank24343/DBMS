@@ -66,7 +66,7 @@ def today_appointments(request, fac_id):
         SELECT v.id, v.citizen_id, c.name, v.reason, v.visit_date
         FROM visit v
         JOIN citizen c ON v.citizen_id = c.citizen_id
-        WHERE v.centre_id = %s AND v.visit_date = %s and status = 'pending'
+        WHERE v.centre_id = %s AND v.visit_date = %s and status = "pending"
     """, [fac_id, today])
     
     rows = cursor.fetchall()
@@ -235,7 +235,7 @@ def add_procedure(request, visit_id):
 def facility_inventory(request, fac_id):
     cursor = connection.cursor()
     cursor.execute("""
-        SELECT i.name, inv.quantity, inv.expiry
+        SELECT i.name, inv.quantity, inv.expiry, i.id
         FROM inventory inv
         JOIN item i ON inv.item_id = i.id
         WHERE inv.place_id = %s
@@ -246,7 +246,8 @@ def facility_inventory(request, fac_id):
         {
             "item": row[0],
             "quantity": row[1],
-            "expiry": row[2]
+            "expiry": row[2],
+            "item_id": row[3]
         } for row in rows
     ]
     return Response(data)
@@ -274,6 +275,9 @@ def log_usage(request):
         INSERT INTO item_use (item_id, fac_id, use_date, quantity)
         VALUES (%s, %s, %s, %s)
     """, [request.data['item_id'], request.data['facility_id'], date.today(), request.data['quantity']])
+    cursor.execute(
+        """UPDATE inventory SET quantity = quantity-%s WHERE place_id = %s AND item_id = %s""", [request.data['quantity'],request.data['facility_id'], request.data['item_id']]
+    )
     return Response({"status": "logged"})
 
 @api_view(['GET'])

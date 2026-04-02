@@ -39,6 +39,7 @@ import FacilityWorkers from './pages/FacilityWorkers';
 import ManualBuy from './pages/ManualBuy';
 import PendingLabOrders from './pages/PendingLabOrders';
 import LabResultUpload from './pages/LabResultUpload';
+import WarehouseDashboard from './pages/WarehouseDashboard';
 
 function CitizenWrapper() {
   const { aadharNo } = useParams();
@@ -81,6 +82,9 @@ function App() {
                 )}
                 {currentUser.role === 'worker' && (
                   <Link to={`/facility-dashboard`} className="hover:text-white transition-colors">Facility Command</Link>
+                )}
+                {currentUser.role === 'warehouse' && (
+                  <Link to="/warehouse-dashboard/" className="hover:text-white transition-colors">Warehouse Inventory</Link>
                 )}
                 {currentUser.role === 'admin' && (
                   <Link to="/admin" className="hover:text-white transition-colors">Dept of Health Admin</Link>
@@ -146,6 +150,7 @@ function App() {
               <Route path="/fac-workers" element={<FacilityWorkers />} />
               <Route path="/pending-lab-orders" element={<PendingLabOrders />} />
               <Route path="/lab-result-upload/:orderId" element={<LabResultUpload />} />
+              <Route path="/warehouse-dashboard/" element={<WarehouseDashboard />}/>
             </Routes>
           </main>
 

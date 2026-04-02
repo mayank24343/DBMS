@@ -51,7 +51,7 @@ const AddProcedure = () => {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-          procedure_ids: selectedProcedures
+          procedure_id: selectedProcedures
         })
       });
       setSuccess(true);

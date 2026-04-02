@@ -180,6 +180,14 @@ const FacilityDashboard = () => {
             <p className="opacity-90">View and manage pending laboratory orders</p>
           </div>
           </Link>
+
+          <Link to="/current-patients/">
+          <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 text-white p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all cursor-pointer group">
+            <Users className="w-12 h-12 mx-auto mb-4 opacity-90 group-hover:scale-110 transition-transform" />
+            <h3 className="text-xl font-bold mb-2">Current Patients</h3>
+            <p className="opacity-90">View Current Patients</p>
+          </div>
+          </Link>
         </div>
 
         

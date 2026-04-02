@@ -1,22 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { facilityAPI } from '../services/api';
-import { Package, AlertCircle, Search, CheckCircle, TrendingDown, Filter } from 'lucide-react';
+import { Package, AlertCircle, CheckCircle, TrendingDown } from 'lucide-react';
 
 const LogUsage = () => {
   const facilityId = localStorage.getItem('facility_id');
   const navigate = useNavigate();
-  const [inventory, setInventory] = useState([]);
-  const [filteredInventory, setFilteredInventory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('all');
   
-  // Keep ID as a string to avoid JavaScript Number/NaN quirks
-  const [selectedItemId, setSelectedItemId] = useState('');
+  const [inventory, setInventory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Typing-based states
+  const [typedId, setTypedId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ show: false, type: '', text: '' });
+
+  // Refs for rapid keyboard entry
+  const idInputRef = useRef(null);
+  const qtyInputRef = useRef(null);
 
   useEffect(() => {
     if (!facilityId) {
@@ -26,59 +28,60 @@ const LogUsage = () => {
     loadInventory();
   }, [facilityId, navigate]);
 
-  const loadInventory = async (tab = 'all') => {
+  const loadInventory = async () => {
     setLoading(true);
     try {
-      let data;
-      if (tab === 'low-stock') {
-        data = await facilityAPI.fetchLowStock(facilityId);
-      } else {
-        data = await facilityAPI.fetchFullInventory(facilityId);
-      }
-      
-      // Ensure we always have an array
+      const data = await facilityAPI.fetchFullInventory(facilityId);
       const safeData = Array.isArray(data) ? data : (data?.results || data?.data || []);
       setInventory(safeData);
-      setFilteredInventory(safeData);
     } catch (err) {
       showMessage('error', 'Failed to load inventory');
     } finally {
       setLoading(false);
+      // Auto-focus the ID input when the page loads
+      setTimeout(() => idInputRef.current?.focus(), 100);
     }
   };
 
-  useEffect(() => {
-    if (search.trim()) {
-      setFilteredInventory(inventory.filter(item => 
-        (item.item || item.name || '').toLowerCase().includes(search.toLowerCase())
-      ));
+  // Find the item strictly based on what is typed
+  const selectedItem = inventory.find(item => String(item.item_id) === String(typedId).trim());
+  console.log(selectedItem)
+
+  const handleIdChange = (e) => {
+    const val = e.target.value;
+    setTypedId(val);
+    // Auto-set quantity to 1 if a valid item ID is recognized
+    const itemExists = inventory.find(item => String(item.item_id) === String(val).trim());
+    if (itemExists) {
+      setQuantity('1');
     } else {
-      setFilteredInventory(inventory);
+      setQuantity('');
     }
-  }, [search, inventory]);
+  };
 
-  useEffect(() => {
-    loadInventory(activeTab);
-  }, [activeTab]);
-
-  // FIX: Safe, strict string comparison regardless of whether API sends string or int
-  const selectedItem = inventory.find(item => String(item.id) === String(selectedItemId));
-
-  const handleLogUsage = async () => {
+  const handleLogUsage = async (e) => {
+    if (e) e.preventDefault();
     const qtyToLog = Number(quantity);
     
     if (!selectedItem || qtyToLog < 1 || qtyToLog > selectedItem.quantity) {
-      showMessage('error', `Invalid selection. Quantity must be between 1 and ${selectedItem?.quantity || 0}`);
+      showMessage('error', `Invalid input. Check ID and ensure quantity is between 1 and ${selectedItem?.quantity || 0}`);
       return;
     }
 
     setSubmitting(true);
     try {
-      await facilityAPI.logUsage(selectedItem.id, facilityId, qtyToLog);
-      showMessage('success', `Logged ${qtyToLog} units. Stock updated.`);
-      setSelectedItemId('');
+      console.log("hereee");
+      console.log(selectedItem.item_id, qtyToLog);
+      await facilityAPI.logUsage(selectedItem.item_id, facilityId, qtyToLog);
+      showMessage('success', `Success: Logged ${qtyToLog} units of ${selectedItem.item || selectedItem.name}.`);
+      
+      // Reset for the next rapid entry
+      setTypedId('');
       setQuantity('');
-      loadInventory(activeTab);
+      await loadInventory();
+      
+      // Instantly bounce focus back to the ID field for the next item
+      idInputRef.current?.focus();
     } catch (err) {
       showMessage('error', 'Failed to log usage. Try again.');
     } finally {
@@ -86,12 +89,19 @@ const LogUsage = () => {
     }
   };
 
-  const showMessage = (type, text) => {
-    setMessage({ show: true, type, text });
-    setTimeout(() => setMessage({ show: false, type: '', text: '' }), 4000);
+  // Allow pressing "Enter" to submit quickly
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && selectedItem && quantity) {
+      handleLogUsage();
+    }
   };
 
-  if (loading) {
+  const showMessage = (type, text) => {
+    setMessage({ show: true, type, text });
+    setTimeout(() => setMessage({ show: false, type: '', text: '' }), 3000);
+  };
+
+  if (loading && inventory.length === 0) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50">
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600"></div>
@@ -100,142 +110,116 @@ const LogUsage = () => {
   }
 
   const totalItems = inventory.length;
-  const lowStockCount = inventory.filter(item => item.quantity < (item.threshold || 0)).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-6">
         
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <div className="inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-lg shadow-lg mb-6">
             <TrendingDown className="w-5 h-5 mr-2" />
-            Log Item Usage
+            Rapid Data Entry
           </div>
-          <h1 className="text-5xl font-black bg-gradient-to-r from-gray-900 to-orange-900 bg-clip-text text-transparent mb-6">
-            Track Inventory Usage ({totalItems} items)
+          <h1 className="text-5xl font-black bg-gradient-to-r from-gray-900 to-orange-900 bg-clip-text text-transparent mb-4">
+            Type ID to Log Usage
           </h1>
+          <p className="text-gray-500 text-lg">Use a keyboard or barcode scanner for fast entry.</p>
         </div>
 
-        {/* Single Item Usage Form */}
+        {/* Rapid Typing Form */}
         <div className="bg-white rounded-3xl shadow-2xl p-12 border border-gray-100 max-w-2xl mx-auto mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Log Usage for One Item</h2>
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Select Item</label>
-              <select
-                value={selectedItemId}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedItemId(val);
-                  setQuantity(val ? '1' : ''); // Set to '1' naturally if an item is picked
-                }}
-                className="w-full px-4 py-4 border border-gray-200 rounded-2xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all text-lg"
-              >
-                <option value="">Choose an item...</option>
-                {filteredInventory.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.item || item.name} (Stock: {item.quantity})
-                  </option>
-                ))}
-              </select>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Item ID</label>
+              <input
+                ref={idInputRef}
+                type="text"
+                value={typedId}
+                onChange={handleIdChange}
+                onKeyDown={(e) => e.key === 'Enter' && qtyInputRef.current?.focus()}
+                className="w-full px-6 py-5 border-2 border-gray-200 rounded-2xl bg-gray-50 focus:bg-white focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-2xl font-mono tracking-widest"
+                placeholder="Scan or type ID..."
+                autoComplete="off"
+              />
+              
+              {/* Live Validation Feedback */}
+              {typedId.length > 0 && !selectedItem && (
+                <div className="text-sm text-red-500 font-bold mt-3 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" /> No item found with this ID
+                </div>
+              )}
+              {selectedItem && (
+                <div className="text-sm text-emerald-600 font-bold mt-3 flex items-center gap-1">
+                  <CheckCircle className="w-4 h-4" /> Match: {selectedItem.item || selectedItem.name} (Stock: {selectedItem.quantity})
+                </div>
+              )}
             </div>
             
             {selectedItem && (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Current Stock</label>
-                    <div className="p-4 bg-emerald-100 rounded-xl text-lg font-bold text-emerald-800">
-                      {selectedItem.quantity}
-                    </div>
+              <div className="animate-in slide-in-from-top-4 fade-in duration-200">
+                <label className="block text-sm font-bold text-gray-700 mb-2">Usage Quantity</label>
+                <input
+                  ref={qtyInputRef}
+                  type="number"
+                  min="1"
+                  max={selectedItem.quantity}
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="w-full px-6 py-5 border-2 border-gray-200 rounded-2xl bg-gray-50 focus:bg-white focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-2xl font-mono"
+                  placeholder="Enter quantity"
+                />
+                {Number(quantity) > selectedItem.quantity && (
+                  <div className="text-sm text-red-500 font-bold mt-3">
+                    Exceeds current stock limit of {selectedItem.quantity}.
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Threshold</label>
-                    <div className="p-4 bg-gray-100 rounded-xl text-lg font-mono">
-                      {selectedItem.threshold || 'N/A'}
-                    </div>
-                  </div>
-                </div>
+                )}
                 
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Usage Quantity</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={selectedItem.quantity}
-                    value={quantity}
-                    // FIX: Allows empty string so backspacing doesn't force a '0'
-                    onChange={(e) => setQuantity(e.target.value)}
-                    className="w-full px-4 py-4 border border-gray-200 rounded-2xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all text-lg text-right font-mono"
-                    placeholder="Enter quantity"
-                  />
-                  {Number(quantity) > selectedItem.quantity && (
-                    <div className="text-sm text-red-500 font-bold mt-2">
-                      Cannot exceed current stock of {selectedItem.quantity}.
-                    </div>
-                  )}
-                </div>
-              </>
+                <button
+                  onClick={handleLogUsage}
+                  disabled={!quantity || Number(quantity) < 1 || Number(quantity) > selectedItem.quantity || submitting}
+                  className="w-full mt-8 px-8 py-6 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xl rounded-2xl shadow-xl hover:shadow-2xl transition-all flex items-center gap-3 justify-center"
+                >
+                  {submitting ? 'Logging...' : `Log ${quantity || ''} Units (Press Enter)`}
+                </button>
+              </div>
             )}
-            
-            <button
-              onClick={handleLogUsage}
-              disabled={
-                !selectedItem || 
-                !quantity || 
-                Number(quantity) < 1 || 
-                Number(quantity) > selectedItem.quantity || 
-                submitting
-              }
-              className="w-full px-8 py-6 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xl rounded-2xl shadow-2xl hover:shadow-3xl transition-all flex items-center gap-3 justify-center"
-            >
-              {submitting ? 'Logging Usage...' : `Log ${quantity || ''} Units`}
-            </button>
           </div>
         </div>
 
-        {/* Quick Reference Table */}
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+        {/* Read-Only Reference Table */}
+        <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 opacity-90">
           <div className="px-8 py-6 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-            <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-              <Package className="w-8 h-8" />
-              Available Items
+            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+              <Package className="w-6 h-6" />
+              Inventory Reference ({totalItems} items)
             </h3>
+            <p className="text-sm text-gray-500 mt-1">Look up IDs here. Table is read-only.</p>
           </div>
           
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-96 overflow-y-auto">
             <table className="w-full text-left border-collapse">
-              <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase text-xs tracking-wider">
+              <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase text-xs tracking-wider sticky top-0">
                 <tr>
-                  <th className="px-8 py-4 font-bold">Item Name</th>
-                  <th className="px-6 py-4 font-bold text-right">Current Stock</th>
-                  <th className="px-6 py-4 font-bold text-center">Action</th>
+                  <th className="px-8 py-4 font-bold bg-gray-50">Item ID</th>
+                  <th className="px-6 py-4 font-bold bg-gray-50">Item Name</th>
+                  <th className="px-6 py-4 font-bold text-right bg-gray-50">Current Stock</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredInventory.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50 transition-colors cursor-pointer group" onClick={() => {
-                    setSelectedItemId(String(item.id));
-                    setQuantity('1');
-                  }}>
-                    <td className="px-8 py-6 font-semibold text-gray-900 group-hover:font-black">
+              <tbody className="divide-y divide-gray-100">
+                {inventory.map((item) => (
+                  <tr key={item.item_id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-8 py-4 font-mono font-bold text-blue-600">
+                      {item.item_id}
+                    </td>
+                    <td className="px-6 py-4 font-semibold text-gray-900">
                       {item.item || item.name}
                     </td>
-                    <td className="px-6 py-6 text-right">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-emerald-100 text-emerald-800">
+                    <td className="px-6 py-4 text-right">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-gray-100 text-gray-700">
                         {item.quantity}
                       </span>
-                    </td>
-                    <td className="px-6 py-6 text-center">
-                      {String(item.id) === selectedItemId ? (
-                        <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-800 px-4 py-2 rounded-full font-bold text-sm">
-                          <CheckCircle className="w-4 h-4" />
-                          Selected
-                        </div>
-                      ) : (
-                        <span className="opacity-60 text-sm">Click to select</span>
-                      )}
                     </td>
                   </tr>
                 ))}
@@ -244,14 +228,14 @@ const LogUsage = () => {
           </div>
         </div>
 
-        {/* Global Message */}
+        {/* Global Toast Message */}
         {message.show && (
-          <div className={`fixed top-24 right-6 z-50 p-6 rounded-3xl shadow-2xl transform transition-all ${
-            message.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+          <div className={`fixed top-8 right-1/2 translate-x-1/2 z-50 px-8 py-4 rounded-full shadow-2xl transform transition-all animate-in slide-in-from-top-4 fade-in duration-300 ${
+            message.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
           }`}>
             <div className="flex items-center gap-3">
               {message.type === 'success' ? <CheckCircle className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
-              <span className="font-bold">{message.text}</span>
+              <span className="font-bold text-lg">{message.text}</span>
             </div>
           </div>
         )}

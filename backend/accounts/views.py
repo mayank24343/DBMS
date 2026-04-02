@@ -98,6 +98,19 @@ def login_view(request):
                 "role": "supplier",
                 "supplier_id": user_id
             })
+        
+        elif role == "warehouse":
+            cursor.execute("""SELECT id from warehouse where id = %s""", [identifier])
+
+            row = cursor.fetchone()
+            if not row:
+                return Response({"error": "Warehouse"}, status=400)
+            
+            return Response({
+                "role":"warehouse",
+                "id": identifier
+            })
+            
 
         # ================= ADMIN =================
         elif role == "admin":

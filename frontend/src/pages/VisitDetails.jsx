@@ -13,6 +13,7 @@ const VisitDetails = () => {
     citizenAPI.visitDetail(visitId)
       .then(data => {
         setVisit(data);
+      
         setLoading(false);
       })
       .catch(err => {

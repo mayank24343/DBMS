@@ -27,7 +27,7 @@ const AdmitPatient = () => {
 
   const fetchVisitInfo = async () => {
     try {
-      const response = await api.get(`api/visit/${visitId}/`);
+      const response = await api.get(`api/visit/id/${visitId}/`);
       setVisitInfo(response.data);
     } catch (err) {
       console.error('Visit not found');
