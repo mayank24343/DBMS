@@ -202,10 +202,10 @@ const BestSupplier = () => {
                           </span>
                         </td>
                         <td className="px-6 py-6 text-right font-mono text-2xl font-bold text-gray-900">
-                          ${supplier.price}
+                          Rs.{supplier.price}
                         </td>
                         <td className="px-6 py-6 text-right font-mono text-xl font-bold text-emerald-600">
-                          ${totalCost.toFixed(2)}
+                          Rs.{totalCost.toFixed(2)}
                         </td>
                         <td className="px-8 py-6 text-center">
                           <button className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all">
