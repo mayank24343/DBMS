@@ -36,6 +36,7 @@ import LogUsage from './pages/LogUsage';
 import AvailableFacilities from './pages/AvailableFacilities';
 import BestSupplier from './pages/BestSupplier';
 import FacilityWorkers from './pages/FacilityWorkers';
+import ManualBuy from './pages/ManualBuy';
 
 function CitizenWrapper() {
   const { aadharNo } = useParams();
@@ -134,6 +135,7 @@ function App() {
                <Route path='/log-usage' element={<LogUsage />} />
                <Route path='/best-supplier' element={<BestSupplier />} />
                <Route path='/facility-workers' element={<FacilityWorkers />} />
+               <Route path='/manual-buy' element={<ManualBuy />} />
               
               {/* Fallback route if they type a bad URL */}
               <Route path="*" element={<Navigate to="/" replace />} />

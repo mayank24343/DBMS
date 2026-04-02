@@ -597,3 +597,23 @@ def visit_id(request, visit_id):
     
     return Response({"citizen_id": row[0]})
 
+@api_view(['GET'])
+def get_suppliers(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT s.id, s.name, p.addr_l1, p.city, p.state
+        FROM supplier s
+        JOIN place p ON s.id = p.id
+    """)
+    
+    rows = cursor.fetchall()
+    data = [
+        {
+            "id": row[0],
+            "name": row[1],
+            "address": row[2],
+            "city": row[3],
+            "state": row[4]
+        } for row in rows
+    ]
+    return Response(data)
