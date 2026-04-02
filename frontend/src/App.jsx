@@ -37,6 +37,8 @@ import AvailableFacilities from './pages/AvailableFacilities';
 import BestSupplier from './pages/BestSupplier';
 import FacilityWorkers from './pages/FacilityWorkers';
 import ManualBuy from './pages/ManualBuy';
+import PendingLabOrders from './pages/PendingLabOrders';
+import LabResultUpload from './pages/LabResultUpload';
 
 function CitizenWrapper() {
   const { aadharNo } = useParams();
@@ -142,6 +144,8 @@ function App() {
               <Route path="/available-facilities" element={<AvailableFacilities />} />
               <Route path="/best-supplier" element={<BestSupplier />} />
               <Route path="/fac-workers" element={<FacilityWorkers />} />
+              <Route path="/pending-lab-orders" element={<PendingLabOrders />} />
+              <Route path="/lab-result-upload/:orderId" element={<LabResultUpload />} />
             </Routes>
           </main>
 

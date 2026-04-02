@@ -5,6 +5,7 @@ from .views import (
     get_facility,
     facility_contacts,
     get_citizen,
+    get_lab_order_details,
 
     # wards / occupancy
     get_ward_availability,
@@ -78,6 +79,7 @@ urlpatterns = [
 
     # ================= LAB =================
     path('lab/<int:lab_id>/pending/', pending_lab_tests, name='lab-pending'),
+    path('lab/order/<int:order_id>/', get_lab_order_details, name='lab-order-details'),
     path('lab/<int:lab_id>/all/', all_lab_tests, name='lab-all'),
     path('lab/result/', submit_lab_result, name='lab-submit'),
 

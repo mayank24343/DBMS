@@ -30,6 +30,18 @@ const CurrentPatients = () => {
     }
   };
 
+  const handleDone = (visitId) => async () => {
+    setLoading(true);
+    try {
+      await api.post(`api/visit/${visitId}/mark-done/`);
+      fetchCurrentPatients();
+    } catch (err) {
+      console.error('Failed to mark visit as done');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
@@ -184,6 +196,15 @@ const CurrentPatients = () => {
                             >
                               Admit
                             </Link>
+                          )}
+
+                          {!patient.ward && (
+                            <button
+                            onClick={handleDone(patient.visit_id)}
+                              className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-5 py-3 rounded-xl font-bold hover:shadow-lg hover:from-green-600 hover:to-emerald-600 transition-all flex items-center gap-2 text-sm shadow-md"
+                            >
+                              Mark Done
+                            </button>
                           )}
                         </div>
                       </div>

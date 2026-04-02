@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { facilityAPI } from '../services/api';
-import { Hospital, Users, TrendingUp, ClipboardList, Syringe, FileText, ShoppingCart, AlertCircle, Calendar, MapPin, Activity } from 'lucide-react';
+import { Hospital, Users, TrendingUp, ClipboardList, Syringe, FileText, ShoppingCart, AlertCircle, Calendar, MapPin, Activity, Microscope } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const FacilityDashboard = () => {
@@ -170,6 +170,14 @@ const FacilityDashboard = () => {
             <ShoppingCart className="w-12 h-12 mx-auto mb-4 opacity-90 group-hover:scale-110 transition-transform" />
             <h3 className="text-xl font-bold mb-2">Place Orders</h3>
             <p className="opacity-90">Order from suppliers</p>
+          </div>
+          </Link>
+
+          <Link to="/pending-lab-orders">
+          <div className="bg-gradient-to-br from-teal-500 to-teal-600 text-white p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all cursor-pointer group">
+            <Microscope className="w-12 h-12 mx-auto mb-4 opacity-90 group-hover:scale-110 transition-transform" />
+            <h3 className="text-xl font-bold mb-2">Pending Lab Orders</h3>
+            <p className="opacity-90">View and manage pending laboratory orders</p>
           </div>
           </Link>
         </div>

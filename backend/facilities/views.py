@@ -277,6 +277,31 @@ def log_usage(request):
     return Response({"status": "logged"})
 
 @api_view(['GET'])
+def get_lab_order_details(request, order_id):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT lo.id, lt.name, v.citizen_id, c.name, lo.order_date
+        FROM lab_order lo
+        JOIN lab_test lt ON lo.test_id = lt.id
+        JOIN visit v ON lo.visit_id = v.id
+        JOIN citizen c ON v.citizen_id = c.citizen_id
+        WHERE lo.id = %s
+    """, [order_id])
+    
+    row = cursor.fetchone()
+    if not row:
+        return Response({"error": "Lab order not found"}, status=404)
+    
+    data = {
+        "order_id": row[0],
+        "test": row[1],
+        "citizen_id": row[2],
+        "citizen_name": row[3],
+        "date": row[4]
+    }
+    return Response(data)
+
+@api_view(['GET'])
 def get_current_visit_admit(request, fac_id):
     cursor = connection.cursor()
     cursor.execute("""

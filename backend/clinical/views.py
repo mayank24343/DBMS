@@ -407,6 +407,14 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 @api_view(['POST'])
+def mark_appointment_done(request, visit_id):
+    cursor = connection.cursor()
+    cursor.execute("""
+        UPDATE visit SET status = 'done' WHERE id = %s
+    """, [visit_id])
+    return Response({"message": "Visit marked as done!"})
+
+@api_view(['POST'])
 def create_prescription(request, visit_id):
     data = request.data
     cursor = connection.cursor()

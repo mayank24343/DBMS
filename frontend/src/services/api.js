@@ -120,6 +120,18 @@ export const facilityAPI = {
   getAllFacilities: async () => {
     const response = await api.get('api/all-facilities/');
     return response.data;
+  },
+  getPendingLabOrders: async (facId) => {
+    const response = await api.get(`api/lab/${facId}/pending/`);
+    return response.data;
+  },
+  getLabOrderDetails: async (orderId) => {
+    const response = await api.get(`api/lab/order/${orderId}/`);
+    return response.data;
+  },
+  submitLabResult: async (orderId, resultText) => {
+    const response = await api.post(`api/lab/result/`, { result: resultText, order_id: orderId });
+    return response.data;
   }
 };
 
