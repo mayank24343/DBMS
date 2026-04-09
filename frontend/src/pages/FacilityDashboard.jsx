@@ -164,14 +164,6 @@ const FacilityDashboard = () => {
             <p className="opacity-90">Patient admissions & ward management</p>
           </div>
           </Link>
-          
-          <Link to="/manual-buy">
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all cursor-pointer group">
-            <ShoppingCart className="w-12 h-12 mx-auto mb-4 opacity-90 group-hover:scale-110 transition-transform" />
-            <h3 className="text-xl font-bold mb-2">Place Orders</h3>
-            <p className="opacity-90">Order from suppliers</p>
-          </div>
-          </Link>
 
           <Link to="/pending-lab-orders">
           <div className="bg-gradient-to-br from-teal-500 to-teal-600 text-white p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all cursor-pointer group">
