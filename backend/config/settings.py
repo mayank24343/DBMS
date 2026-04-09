@@ -93,6 +93,10 @@ DATABASES = {
         'PASSWORD': '@F83B821Ssmall',
         'HOST': 'localhost',
         'PORT': '3306',
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES', transaction_isolation='READ-COMMITTED'",
+        },
+        'ATOMIC_REQUESTS': True, # Automatically wraps every view in a transaction
     }
 }
 

@@ -14,6 +14,7 @@ const TransferPatient = () => {
   const [loading, setLoading] = useState(false);
   const [facilityLoading, setFacilityLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [message, setMessage] = useState("Transferred Successfully")
 
   useEffect(() => {
     if (visitId) {
@@ -69,7 +70,7 @@ const TransferPatient = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await fetch('http://127.0.0.1:8000/api/transfer/', {
+      const response = await fetch('http://127.0.0.1:8000/api/transfer/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -81,6 +82,9 @@ const TransferPatient = () => {
           reason
         })
       });
+     if (response.status != 200){
+      setMessage("Could Not Process Request Try Again")
+     }
       setSuccess(true);
     } catch (err) {
       console.error('Transfer failed', err);
@@ -96,8 +100,8 @@ const TransferPatient = () => {
           <div className="w-24 h-24 bg-emerald-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
             <ArrowRightLeft className="w-12 h-12 text-emerald-600" />
           </div>
-          <h1 className="text-3xl font-black text-gray-900 mb-4">Transfer Complete!</h1>
-          <p className="text-lg text-gray-600 mb-8">Patient successfully transferred to new facility.</p>
+          <h1 className="text-3xl font-black text-gray-900 mb-4">{message}</h1>
+          <p className="text-lg text-gray-600 mb-8"></p>
           <button 
             onClick={() => setSuccess(false)}
             className="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-emerald-700 transition-all w-full mb-4"

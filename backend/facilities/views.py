@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from django.db import connection
+from django.db import transaction
 from datetime import date, timedelta
 
 from datetime import datetime
@@ -195,6 +196,7 @@ def citizen_lab_tests(request, citizen_id):
     data = [{"test": row[0], "status": "pending"} for row in rows]
     return Response(data)
 
+#redundant 
 @api_view(['POST'])
 def add_diagnosis(request, visit_id):
     cursor = connection.cursor()
@@ -268,6 +270,7 @@ def near_expiry(request, fac_id):
     data = [{"item": row[0], "expiry": row[1], "quantity": row[2]} for row in rows]
     return Response(data)
 
+#tr
 @api_view(['POST'])
 def log_usage(request):
     cursor = connection.cursor()
@@ -333,71 +336,107 @@ def get_current_visit_admit(request, fac_id):
     ]
     return Response(data)
 
+#tr
+from django.db import transaction, connection
+from rest_framework import status
+
 @api_view(['POST'])
 def admit_patient(request):
-    cursor = connection.cursor()
-    cursor.execute("""
-        SELECT occupied, total FROM wards WHERE id = %s
-    """, [request.data['ward_id']])
-    
-    row = cursor.fetchone()
-    if row[0] >= row[1]:
-        return Response({"error": "Ward full"}, status=400)
-    
-    cursor.execute("""
-        INSERT INTO admission (citizen_id, visit_id, ward_id, admission_date)
-        VALUES (%s, %s, %s, %s)
-    """, [request.data['citizen_id'], request.data['visit_id'], request.data['ward_id'], date.today()])
-    cursor.execute("""
-                   UPDATE visit SET status='done' WHERE id = %s
-    """, [request.data['visit_id']])
-    
-    return Response({"status": "admitted"})
+    try:
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                # 1. Lock the ward row for the duration of the transaction
+                cursor.execute("""
+                    SELECT occupied, total FROM wards WHERE id = %s FOR UPDATE
+                """, [request.data['ward_id']])
+                
+                row = cursor.fetchone()
+                if not row:
+                    return Response({"error": "Ward not found"}, status=404)
+                
+                if row[0] >= row[1]:
+                    return Response({"error": "Ward full"}, status=400)
+
+                # 2. Insert Admission
+                cursor.execute("""
+                    INSERT INTO admission (citizen_id, visit_id, ward_id, admission_date)
+                    VALUES (%s, %s, %s, %s)
+                """, [request.data['citizen_id'], request.data['visit_id'], 
+                      request.data['ward_id'], date.today()])
+
+                # 3. Update Visit Status
+                cursor.execute("UPDATE visit SET status='done' WHERE id = %s", [request.data['visit_id']])
+
+                # Note: You should also have a trigger or a query here 
+                # to increment wards.occupied if you aren't using a View.
+        
+        return Response({"status": "admitted"})
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
 
 @api_view(['POST'])
 def discharge_patient(request):
-    cursor = connection.cursor()
-    cursor.execute("""
-        UPDATE admission SET discharge_date = %s WHERE visit_id = %s
-    """, [date.today(), request.data['visit_id']])
+    with transaction.atomic():
+        with connection.cursor() as cursor:
+            cursor.execute("""SELECT w.facility_id FROM wards w JOIN admission a WHERE a.ward_id = w.id AND a.visit_id = %s AND a.discharge_date IS NULL""", [request.data['visit_id']])
+            id = cursor.fetchone()
+            print(request.data['facility_id'])
+            print(id)
+            if (not id or id[0] != int(request.data['facility_id'])):
+                return Response({"error":"error"}, status = 400)
+            
+            cursor.execute("""
+                UPDATE admission SET discharge_date = %s 
+                WHERE visit_id = %s AND discharge_date IS NULL
+            """, [date.today(), request.data['visit_id']])
+            
+            if cursor.rowcount == 0:
+                return Response({"error": "No active admission found"}, status=404)
+                
     return Response({"status": "discharged"})
 
-from datetime import date
-
+#tr 
 @api_view(['POST'])
 def transfer_patient(request):
-    cursor = connection.cursor()
-    visit_id = request.data['visit_id']
-    citizen_id = request.data['citizen_id']
-    from_fac = request.data['from_fac']
-    to_fac = request.data['to_fac']
-    new_ward_id = request.data['ward_id']
-    
-    # Check new ward
-    cursor.execute("SELECT occupied, total FROM wards WHERE id = %s", [new_ward_id])
-    row = cursor.fetchone()
-    if row[0] >= row[1]:
-        return Response({"error": "New ward full"}, status=400)
-    
-    # Discharge old admission
-    cursor.execute("""
-        UPDATE admission SET discharge_date = %s WHERE visit_id = %s AND discharge_date IS NULL
-    """, [date.today(), visit_id])
-    
-    # Create new admission
-    cursor.execute("""
-        INSERT INTO admission (citizen_id, visit_id, ward_id, admission_date)
-        VALUES (%s, %s, %s, %s)
-    """, [citizen_id, visit_id, new_ward_id, date.today()])
-    
-    # Log transfer
-    cursor.execute("""
-        INSERT INTO transfers (visit_id, citizen_id, from_fac, to_fac, date_of_transfer, reason)
-        VALUES (%s, %s, %s, %s, %s, %s)
-    """, [visit_id, citizen_id, from_fac, to_fac, date.today(), request.data.get('reason', '')])
-    
-    return Response({"status": "transferred"})
+    data = request.data
+    try:
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                # 1. Lock and Check New Ward
+                cursor.execute("SELECT occupied, total FROM wards WHERE id = %s FOR UPDATE", [data['ward_id']])
+                ward = cursor.fetchone()
+                if not ward or ward[0] >= ward[1]:
+                    return Response({"error": "Target ward full or missing"}, status=400)
+                
+                cursor.execute("SELECT * FROM admission WHERE visit_id = %s AND discharge_date IS NULL", [data['visit_id']])
+                t = cursor.fetchone()
+                if not t:
+                    print(data['visit_id'])
+                    return Response({"error": "Patient Not Admitted"}, status=400)
 
+                # 2. Discharge old admission
+                cursor.execute("""
+                    UPDATE admission SET discharge_date = %s 
+                    WHERE visit_id = %s AND discharge_date IS NULL
+                """, [date.today(), data['visit_id']])
+                
+
+                # 3. Create new admission
+                cursor.execute("""
+                    INSERT INTO admission (citizen_id, visit_id, ward_id, admission_date)
+                    VALUES (%s, %s, %s, %s)
+                """, [data['citizen_id'], data['visit_id'], data['ward_id'], date.today()])
+
+                # 4. Log transfer
+                cursor.execute("""
+                    INSERT INTO transfers (visit_id, citizen_id, from_fac, to_fac, date_of_transfer, reason)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, [data['visit_id'], data['citizen_id'], data['from_fac'], 
+                      data['to_fac'], date.today(), data.get('reason', '')])
+
+        return Response({"status": "transferred"})
+    except Exception as e:
+        return Response({"error": "Transfer failed", "details": str(e)}, status=500)
 
 
 @api_view(['GET'])
@@ -549,8 +588,6 @@ def low_inventory(request, fac_id):
     ]
     return Response(data)
 
-
-
 @api_view(['GET'])
 def disease_geo(request, disease_id):
     cursor = connection.cursor()
@@ -617,14 +654,14 @@ def disease_monthly_avg(request, disease_id):
 def visit_id(request, visit_id):
     cursor = connection.cursor()
     cursor.execute("""
-        SELECT citizen_id FROM visit WHERE id = %s
+        SELECT citizen_id, centre_id FROM visit WHERE id = %s
     """, [visit_id])
     
     row = cursor.fetchone()
     if not row:
         return Response({"error": "Visit not found"}, status=404)
     
-    return Response({"citizen_id": row[0]})
+    return Response({"citizen_id": row[0], "facility_id":row[1]})
 
 @api_view(['GET'])
 def get_suppliers(request):

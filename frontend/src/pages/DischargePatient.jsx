@@ -8,6 +8,7 @@ const DischargePatient = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [visitInfo, setVisitInfo] = useState(null);
+  const [message, setMessage] = useState("Discharged Patient!");
 
   const fetchVisitInfo = async () => {
     try {
@@ -21,14 +22,19 @@ const DischargePatient = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    
     try {
-      await fetch(`http://127.0.0.1:8000/api/discharge/`, {
+      console.log(localStorage.getItem("fac_id"));
+      const response = await fetch(`http://127.0.0.1:8000/api/discharge/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ visit_id: visitId })
+        body: JSON.stringify({ visit_id: visitId, facility_id: localStorage.getItem("facility_id")})
       });
+      if (response.status != 200){
+        setMessage("Could Not Discharge Please Try Again");
+      }
       setSuccess(true);
     } catch (err) {
       console.error('Discharge failed', err);
@@ -44,8 +50,8 @@ const DischargePatient = () => {
           <div className="w-24 h-24 bg-purple-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
             <UserCheck className="w-12 h-12 text-purple-600" />
           </div>
-          <h1 className="text-3xl font-black text-gray-900 mb-4">Patient Discharged!</h1>
-          <p className="text-lg text-gray-600 mb-8">Patient successfully discharged from facility.</p>
+          <h1 className="text-3xl font-black text-gray-900 mb-4">{message}</h1>
+          <p className="text-lg text-gray-600 mb-8"></p>
           <button 
             onClick={() => setSuccess(false)}
             className="bg-purple-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-purple-700 transition-all"

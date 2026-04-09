@@ -83,28 +83,30 @@ def vaccination_history(request, citizen_id):
 @api_view(['GET'])
 def eligible_vaccines(request, citizen_id):
     cursor = connection.cursor()
-    cursor.execute("""
-        SELECT c.dob FROM citizen c WHERE c.citizen_id = %s
-    """, [citizen_id])
     
-    row = cursor.fetchone()
-    if not row:
-        return Response({"error": "Citizen not found"}, status=404)
-    
-    dob = row[0]
-    age = date.today().year - dob.year
-    
-    cursor.execute("""
-        SELECT DISTINCT i.id, i.name
+    query = """
+        SELECT i.id, i.name
         FROM item i
         JOIN vacc_prereq_age vpa ON i.id = vpa.vaccine_id
-        WHERE i.type = 'vaccine' AND vpa.age_limit <= %s
-        AND i.id NOT IN (
-            SELECT v.vaccine_id FROM vaccination v WHERE v.citizen_id = %s
+        WHERE i.type = 'vaccine'
+        AND vpa.age_limit <= (
+            SELECT (EXTRACT(YEAR FROM CURRENT_DATE) - EXTRACT(YEAR FROM c.dob))
+            FROM citizen c 
+            WHERE c.citizen_id = %s
         )
-    """, [age, citizen_id])
+        AND i.id NOT IN (
+            SELECT v.vaccine_id 
+            FROM vaccination v 
+            WHERE v.citizen_id = %s
+        )
+    """
     
+    cursor.execute(query, [citizen_id, citizen_id])
     rows = cursor.fetchall()
+    
+    if not rows:
+        return Response([])
+
     data = [{"id": row[0], "name": row[1]} for row in rows]
     return Response(data)
 
@@ -182,7 +184,7 @@ def visit_detail(request, id):
     """, [id])
     admission_rows = cursor.fetchall()
     if admission_rows:
-        data["admission"] = [{"admission_date": admission_rows[0][0], "discharge_date": admission_rows[0][1], "ward": admission_rows[0][2]}]
+        data["admission"] = [{"admission_date": row[0], "discharge_date": row[1], "ward": row[2]} for row in admission_rows]
     
     return Response(data)
 
@@ -385,7 +387,7 @@ def create_visit(request):
 
     cursor.execute("""
         INSERT INTO visit (citizen_id, centre_id, visit_date, reason, status)
-        VALUES (%s, %s, CURRENT_DATE(), %s, 'done')
+        VALUES (%s, %s, CURRENT_DATE(), %s, 'pending')
     """, [citizen_id, data['facility_id'], data['reason']])
     
     visit_id = cursor.lastrowid
