@@ -132,7 +132,7 @@ const Login = ({onLogin}) => {
                         <option value="worker">Healthcare Worker</option>
                         <option value="warehouse">Warehouse</option>
                         <option value="supplier">Supplier</option>
-                        <option value="admin">Admin</option>
+                        <option value="admin">Department of Health</option>
                     </select>
 
                     {/* IDENTIFIER */}
