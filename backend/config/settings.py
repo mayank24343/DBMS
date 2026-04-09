@@ -25,7 +25,13 @@ SECRET_KEY = 'django-insecure-8as$n8hmv26d63xo0g*8b!#!)ed0^ob4-0an0x(+6rbag0-p+e
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# backend/settings.py
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '.vercel.app',  # allows all subdomains on vercel.app
+    # Add your custom domain if you have one
+]
 
 
 # Application definition
@@ -136,3 +142,4 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
