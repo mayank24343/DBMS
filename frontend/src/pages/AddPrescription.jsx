@@ -41,16 +41,10 @@ const AddPrescription = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/prescription/${visitId}/`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          item_id: prescription.item_id,dosage: prescription.dosage,frequency: prescription.frequency, start_date: prescription.start_date,end_date: prescription.end_date
-        })
+      await api.post(`api/prescription/${visitId}/`, {
+        item_id: prescription.item_id,dosage: prescription.dosage,frequency: prescription.frequency, start_date: prescription.start_date,end_date: prescription.end_date
       });
-      if (response.ok) {
-        setSuccess(true);
-      }
+      setSuccess(true);
     } catch (err) {
       console.error('Prescription add failed', err);
     } finally {

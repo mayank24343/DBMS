@@ -17,10 +17,8 @@ const AddProcedure = () => {
 
   const fetchProcedures = async () => {
     try {
-      // Assume /api/procedures/ endpoint
-      const response = await fetch('http://127.0.0.1:8000/api/procedures/');
-      const data = await response.json();
-      setProcedures(data);
+      const response = await api.get('api/procedures/');
+      setProcedures(response.data);
     } catch (err) {
       console.error('Failed to fetch procedures');
     }
@@ -47,12 +45,8 @@ const AddProcedure = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await fetch(`http://127.0.0.1:8000/api/procedure/${visitId}/`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          procedure_id: selectedProcedures
-        })
+      await api.post(`api/procedure/${visitId}/`, {
+        procedure_id: selectedProcedures
       });
       setSuccess(true);
     } catch (err) {

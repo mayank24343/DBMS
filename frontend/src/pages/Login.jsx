@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { ShieldPlus } from 'lucide-react';
 
@@ -17,32 +18,21 @@ const Login = ({onLogin}) => {
         setLoading(true);
 
         try {
-            const res = await fetch("http://127.0.0.1:8000/api/login/", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    identifier,
-                    password,
-                    role
-                })
+            const res = await api.post("api/login/", {
+                identifier,
+                password,
+                role
             });
-            console.log(JSON.stringify({
+            console.log({
                     identifier,
                     password,
                     role
-                }));
+                });
 
             // 🔥 FIX: HANDLE HTML ERROR RESPONSE
-            const text = await res.text();
-            let data;
+            const data = res.data;
 
-            try {
-                data = JSON.parse(text);
-            } catch {
-                throw new Error("Server error (likely wrong URL or CORS)");
-            }
-
-            if (!res.ok) throw new Error(data.error || "Login failed");
+            if (!res.status || res.status >= 400) throw new Error(data?.error || "Login failed");
 
             // ================= ROUTING =================
 

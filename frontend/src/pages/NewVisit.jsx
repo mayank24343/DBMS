@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { facilityAPI } from '../services/api';
+import api from '../services/api';
 import { ArrowLeft, Calendar, User, Stethoscope, Save } from 'lucide-react';
 
 const NewVisit = () => {
@@ -13,17 +13,10 @@ const NewVisit = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Assume backend POST endpoint like api/facility/{facilityId}/visit/
-      const response = await fetch(`http://127.0.0.1:8000/api/visit/new/`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({citizen_id: parseInt(citizenId), reason, facility_id: facilityId})
-      });
-      if (response.ok) {
-        setSuccess(true);
-        setCitizenId('');
-        setReason('');
-      }
+      await api.post('api/visit/new/', {citizen_id: parseInt(citizenId), reason, facility_id: facilityId});
+      setSuccess(true);
+      setCitizenId('');
+      setReason('');
     } catch (err) {
       console.error('New visit failed', err);
     } finally {

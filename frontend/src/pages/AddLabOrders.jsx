@@ -22,9 +22,8 @@ const AddLabOrders = () => {
 
   const fetchLabTests = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/lab-tests/');
-      const data = await response.json();
-      setLabTests(data);
+      const response = await api.get('api/lab-tests/');
+      setLabTests(response.data);
     } catch (err) {
       console.error('Failed to fetch lab tests');
     }
@@ -71,13 +70,9 @@ const AddLabOrders = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await fetch(`http://127.0.0.1:8000/api/lab-order/${visitId}/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          test_id: parseInt(selectedTestId),
-          lab_id: parseInt(selectedFacilityId)
-        })
+      await api.post(`api/lab-order/${visitId}/`, {
+        test_id: parseInt(selectedTestId),
+        lab_id: parseInt(selectedFacilityId)
       });
       setSuccess(true);
       // Reset form

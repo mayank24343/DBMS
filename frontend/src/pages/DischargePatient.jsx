@@ -25,16 +25,7 @@ const DischargePatient = () => {
     
     try {
       console.log(localStorage.getItem("fac_id"));
-      const response = await fetch(`http://127.0.0.1:8000/api/discharge/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ visit_id: visitId, facility_id: localStorage.getItem("facility_id")})
-      });
-      if (response.status != 200){
-        setMessage("Could Not Discharge Please Try Again");
-      }
+      await api.post('api/discharge/', { visit_id: visitId, facility_id: localStorage.getItem("facility_id")});
       setSuccess(true);
     } catch (err) {
       console.error('Discharge failed', err);

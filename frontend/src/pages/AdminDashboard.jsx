@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import api from '../services/api';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -45,11 +46,11 @@ const AdminDashboard = () => {
             try {
                 setLoadingDisease(true);
 
-                const trendRes = await fetch(`http://127.0.0.1:8000/api/stats/disease/${diseaseId}/monthly/`);
-                const trendJson = await trendRes.json();
+                const trendRes = await api.get(`api/stats/disease/${diseaseId}/monthly/`);
+                const trendJson = trendRes.data;
 
-                const geoRes = await fetch(`http://127.0.0.1:8000/api/stats/disease/${diseaseId}/geo/`);
-                const geoJson = await geoRes.json();
+                const geoRes = await api.get(`api/stats/disease/${diseaseId}/geo/`);
+                const geoJson = geoRes.data;
 
                 const formattedTrend = (trendJson || []).map(item => ({
                     month: item.month,
@@ -74,8 +75,8 @@ const AdminDashboard = () => {
             if (!selectedDate) return;
             try {
                 setLoadingDaily(true);
-                const res = await fetch(`http://127.0.0.1:8000/api/stats/disease/${diseaseId}/day/?date=${selectedDate}`);
-                const json = await res.json();
+                const res = await api.get(`api/stats/disease/${diseaseId}/day/?date=${selectedDate}`);
+                const json = res.data;
                 
                 setDailyCases(json.cases || 0);
             } catch (err) {

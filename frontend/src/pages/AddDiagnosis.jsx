@@ -20,10 +20,8 @@ const AddDiagnosis = () => {
 
   const fetchDiseases = async () => {
     try {
-      // Assume /api/diseases/ endpoint
-      const response = await fetch('http://127.0.0.1:8000/api/diseases/');
-      const data = await response.json();
-      setDiseases(data);
+      const response = await api.get('api/diseases/');
+      setDiseases(response.data);
     } catch (err) {
       console.error('Failed to fetch diseases');
     }
@@ -42,13 +40,9 @@ const AddDiagnosis = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await fetch(`http://127.0.0.1:8000/api/diagnosis/${visitId}/`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          disease_id: parseInt(selectedDisease),
-          description
-        })
+      await api.post(`api/diagnosis/${visitId}/`, {
+        disease_id: parseInt(selectedDisease),
+        description
       });
       setSuccess(true);
       setVisitId('');
