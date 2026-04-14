@@ -27,10 +27,7 @@ DEBUG = True
 
 # backend/settings.py
 ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    '.vercel.app',  # allows all subdomains on vercel.app
-    # Add your custom domain if you have one
+    '*'
 ]
 
 
