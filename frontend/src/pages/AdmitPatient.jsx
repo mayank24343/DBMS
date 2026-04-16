@@ -46,16 +46,12 @@ const AdmitPatient = () => {
       console.error('Visit not found');
     }
     console.log(visitInfo);
-      const response = await fetch(`http://127.0.0.1:8000/api/admission/`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            citizen_id : visitInfo.citizen_id,
-            visit_id: visitId,
-          ward_id: parseInt(selectedWard)
-        })
+      const response = await api.post('api/admission/', {
+        citizen_id : visitInfo.citizen_id,
+        visit_id: visitId,
+        ward_id: parseInt(selectedWard)
       });
-      if (response.status != 200){
+      if (response.status !== 200){
         setMessage("Admission Failed Try Again")
       }
       setSuccess(true);

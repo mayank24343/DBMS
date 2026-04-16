@@ -70,19 +70,15 @@ const TransferPatient = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/transfer/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          visit_id: parseInt(visitId),
-          citizen_id: visitInfo.citizen_id,
-          from_fac: localStorage.getItem('facilityId'),
-          to_fac: parseInt(selectedFacilityId),
-          ward_id: parseInt(selectedWardId),
-          reason
-        })
+      const response = await api.post('api/transfer/', {
+        visit_id: parseInt(visitId),
+        citizen_id: visitInfo.citizen_id,
+        from_fac: localStorage.getItem('facilityId'),
+        to_fac: parseInt(selectedFacilityId),
+        ward_id: parseInt(selectedWardId),
+        reason
       });
-     if (response.status != 200){
+     if (response.status !== 200){
       setMessage("Could Not Process Request Try Again")
      }
       setSuccess(true);

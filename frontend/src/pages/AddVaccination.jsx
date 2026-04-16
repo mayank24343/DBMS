@@ -26,9 +26,8 @@ const AddVaccination = () => {
 
   const fetchVaccines = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/medicines/');
-      const data = await response.json();
-      setVaccines(data.filter(v => v.type === 'vaccine'));
+      const response = await api.get('api/medicines/');
+      setVaccines(response.data.filter(v => v.type === 'vaccine'));
     } catch (err) {
       console.error('Failed to fetch vaccines');
     }
@@ -61,16 +60,12 @@ const AddVaccination = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await fetch(`http://127.0.0.1:8000/api/vaccination/${visitId}/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          citizen_id: citizenId,
-          item_id: parseInt(selectedVaccineId),
-          dose_number: parseInt(doseNo),
-          centre_id: parseInt(facilityId),
-          notes
-        })
+      await api.post(`api/vaccination/${visitId}/`, {
+        citizen_id: citizenId,
+        item_id: parseInt(selectedVaccineId),
+        dose_number: parseInt(doseNo),
+        centre_id: parseInt(facilityId),
+        notes
       });
       setSuccess(true);
       setSelectedVaccineId('');

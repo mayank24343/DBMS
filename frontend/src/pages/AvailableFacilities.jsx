@@ -21,11 +21,11 @@ const AvailableFacilities = () => {
       try {
         // Replace with your actual Django API endpoints
         const endpoint = filterMode === 'state' 
-          ? 'http://127.0.0.1:8000/api/states/' 
-          : 'http://127.0.0.1:8000/api/cities/';
+          ? 'api/states/' 
+          : 'api/cities/';          
           
-        const response = await fetch(endpoint);
-        if (!response.ok) throw new Error('Failed to fetch regions');
+        const response = await api.get(endpoint);
+        if (response.status !== 200) throw new Error('Failed to fetch regions');
         
         const data = await response.json();
         setRegionOptions(data);
@@ -54,11 +54,11 @@ const AvailableFacilities = () => {
       try {
         // Replace with your actual Django API endpoints
         const endpoint = filterMode === 'state'
-          ? `http://127.0.0.1:8000/api/facilities/available/state/?state=${encodeURIComponent(selectedRegion)}`
-          : `http://127.0.0.1:8000/api/facilities/available/city/?city=${encodeURIComponent(selectedRegion)}`;
+          ? `api/facilities/available/state/?state=${encodeURIComponent(selectedRegion)}`
+          : `api/facilities/available/city/?city=${encodeURIComponent(selectedRegion)}`;
 
-        const response = await fetch(endpoint);
-        if (!response.ok) throw new Error('Failed to fetch facilities');
+        const response = await api.get(endpoint);
+        if (response.status !== 200) throw new Error('Failed to fetch facilities');
         
         const data = await response.json();
         setFacilities(data);

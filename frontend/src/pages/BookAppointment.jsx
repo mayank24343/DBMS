@@ -21,8 +21,8 @@ const BookAppointment = () => {
 
     // 🔥 Fetch facilities from backend
     useEffect(() => {
-        fetch("http://127.0.0.1:8000/api/facilities/")
-            .then(res => res.json())
+        api.get("api/facilities/")
+            .then(res => res.data)
             .then(data => {
                 setFacilities(data);
 
