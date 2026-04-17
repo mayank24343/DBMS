@@ -22,9 +22,6 @@ CREATE INDEX idx_listing_item_price ON listing(item_id, price_per_item);
 -- Speed up worker searches by facility
 CREATE INDEX idx_works_fac_status ON works(fac_id, end_date);
 
--- Speed up skill/qualification filtering
-CREATE INDEX idx_skills_name ON skills(name);
-
 -- medical history view
 CREATE VIEW view_complete_clinical_record AS
 SELECT 
