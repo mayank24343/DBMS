@@ -367,8 +367,7 @@ def admit_patient(request):
                 # 3. Update Visit Status
                 cursor.execute("UPDATE visit SET status='done' WHERE id = %s", [request.data['visit_id']])
 
-                # Note: You should also have a trigger or a query here 
-                # to increment wards.occupied if you aren't using a View.
+                #4. Trigger automatically updates ward capacity on admission table insert
         
         return Response({"status": "admitted"})
     except Exception as e:
