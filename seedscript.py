@@ -1,6 +1,16 @@
 import random
 from datetime import datetime, timedelta
 
+import django
+from django.conf import settings
+
+# 1. Configure minimal settings before importing Django utilities
+if not settings.configured:
+    settings.configure(
+        SECRET_KEY=#fill this for yourself:),
+        PASSWORD_HASHERS=['django.contrib.auth.hashers.PBKDF2PasswordHasher']
+)
+
 from django.contrib.auth.hashers import make_password
 # run once, or just hardcode a precomputed hash for "password" here
 DEFAULT_HASH = make_password("password")
