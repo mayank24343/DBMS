@@ -20,5 +20,7 @@ export default defineConfig({
         },
       },
     },
+  },server: {
+    allowedHosts: ['ryker-ericaceous-selene.ngrok-free.dev']
   },
 })

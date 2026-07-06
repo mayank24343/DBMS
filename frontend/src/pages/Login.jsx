@@ -101,7 +101,7 @@ const Login = ({onLogin}) => {
 
                 <div className="text-center mb-6">
                     <ShieldPlus className="mx-auto text-blue-600" size={40} />
-                    <h1 className="text-2xl font-bold mt-2">National Health System</h1>
+                    <h1 className="text-2xl font-bold mt-2">Integrated National Health Information System</h1>
                 </div>
 
                 {error && (
@@ -120,7 +120,6 @@ const Login = ({onLogin}) => {
                     >
                         <option value="citizen">Citizen</option>
                         <option value="worker">Healthcare Worker</option>
-                        <option value="warehouse">Warehouse</option>
                         <option value="admin">Department of Health</option>
                     </select>
 
