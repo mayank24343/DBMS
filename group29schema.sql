@@ -351,3 +351,11 @@ CREATE TABLE inventory_transfer (
 	FOREIGN KEY (to_id) REFERENCES health_facility(id)
 );
 
+CREATE TABLE auth_token (
+    id SERIAL PRIMARY KEY,
+    `key` VARCHAR(64) UNIQUE NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
+    role VARCHAR(20) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(userid)
+);
