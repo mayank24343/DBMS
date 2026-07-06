@@ -20,7 +20,6 @@ def login_view(request):
     identifier = request.data.get('identifier')
     password = request.data.get('password')
     role = request.data.get('role')
-
     if not identifier or not password or not role:
         return Response({"error": "identifier, password and role are required"}, status=400)
 
@@ -75,7 +74,8 @@ def login_view(request):
         else:
             return Response({"error": "Invalid role"}, status=400)
 
-    except Exception:
+    except Exception as e:
+        print(e)
         return Response({"error": "Login failed"}, status=500)
 
 def create_user(password, role):
