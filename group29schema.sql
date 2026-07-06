@@ -357,5 +357,5 @@ CREATE TABLE auth_token (
     user_id BIGINT UNSIGNED NOT NULL,
     role VARCHAR(20) NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(userid)
+    FOREIGN KEY (user_id) REFERENCES users(userid) ON DELETE CASCADE
 );
