@@ -1,7 +1,5 @@
-# backend/clinical/views.py
-
-# --- Django & DRF Imports ---
-from rest_framework.decorators import api_view
+from accounts.permissions import IsRole, IsOwnerCitizenOrStaff
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.db import connection
 from datetime import date
@@ -10,6 +8,7 @@ from django.db import connection
 from datetime import date
 
 @api_view(['GET'])
+@permission_classes([IsOwnerCitizenOrStaff])
 def medical_history(request, citizen_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -33,6 +32,7 @@ def medical_history(request, citizen_id):
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsOwnerCitizenOrStaff])
 def lab_reports(request, citizen_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -58,6 +58,7 @@ def lab_reports(request, citizen_id):
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsOwnerCitizenOrStaff])
 def vaccination_history(request, citizen_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -81,6 +82,7 @@ def vaccination_history(request, citizen_id):
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsOwnerCitizenOrStaff])
 def eligible_vaccines(request, citizen_id):
     cursor = connection.cursor()
     
@@ -112,11 +114,15 @@ def eligible_vaccines(request, citizen_id):
 
 @api_view(['GET'])
 def visit_detail(request, id):
+    user = request.user
+    if not getattr(user, 'is_authenticated', False):
+        return Response({"error": "Authentication required"}, status=401)
+
     cursor = connection.cursor()
-    
-    # base visit
+
+    # base visit — fetched first so we can check ownership before returning anything
     cursor.execute("""
-        SELECT v.visit_date, hf.name, v.reason, v.status
+        SELECT v.citizen_id, v.visit_date, hf.name, v.reason, v.status
         FROM visit v
         LEFT JOIN health_facility hf ON v.centre_id = hf.id
         WHERE v.id = %s
@@ -124,19 +130,26 @@ def visit_detail(request, id):
     row = cursor.fetchone()
     if not row:
         return Response({"error": "Visit not found"}, status=404)
-    
+
+    visit_citizen_id = row[0]
+
+    if user.role == 'citizen' and str(user.id) != str(visit_citizen_id):
+        return Response({"error": "Forbidden"}, status=403)
+    if user.role not in ('citizen', 'worker', 'admin'):
+        return Response({"error": "Forbidden"}, status=403)
+
     data = {
-        "visit_date": row[0],
-        "facility": row[1],
-        "reason": row[2],
-        "status": row[3],
+        "visit_date": row[1],
+        "facility": row[2],
+        "reason": row[3],
+        "status": row[4],
         "diagnosis": [],
         "prescriptions": [],
         "lab_tests": [],
         "procedures": [],
         "admission": []
     }
-    
+
     # diagnoses
     cursor.execute("""
         SELECT d.name
@@ -144,8 +157,8 @@ def visit_detail(request, id):
         JOIN disease d ON dg.disease_id = d.id
         WHERE dg.visit_id = %s
     """, [id])
-    data["diagnosis"] = [row[0] for row in cursor.fetchall()]
-    
+    data["diagnosis"] = [r[0] for r in cursor.fetchall()]
+
     # prescriptions
     cursor.execute("""
         SELECT i.name, p.dosage, p.frequency
@@ -153,8 +166,8 @@ def visit_detail(request, id):
         JOIN item i ON p.item_id = i.id
         WHERE p.visit_id = %s
     """, [id])
-    data["prescriptions"] = [{"item": row[0], "dosage": row[1], "frequency": row[2]} for row in cursor.fetchall()]
-    
+    data["prescriptions"] = [{"item": r[0], "dosage": r[1], "frequency": r[2]} for r in cursor.fetchall()]
+
     # lab tests
     cursor.execute("""
         SELECT lt.name, lr.result
@@ -163,8 +176,8 @@ def visit_detail(request, id):
         LEFT JOIN lab_result lr ON lo.id = lr.order_id
         WHERE lo.visit_id = %s
     """, [id])
-    data["lab_tests"] = [{"test": row[0], "result": row[1] if row[1] else None} for row in cursor.fetchall()]
-    
+    data["lab_tests"] = [{"test": r[0], "result": r[1] if r[1] else None} for r in cursor.fetchall()]
+
     # procedures
     cursor.execute("""
         SELECT mp.name
@@ -172,23 +185,27 @@ def visit_detail(request, id):
         JOIN medical_procedure mp ON pt.procedure_id = mp.procedure_id
         WHERE pt.visit_id = %s
     """, [id])
-    data["procedures"] = [row[0] for row in cursor.fetchall()]
+    data["procedures"] = [r[0] for r in cursor.fetchall()]
 
-    #admission details
+    # admission details
     cursor.execute("""
         SELECT a.admission_date, a.discharge_date, hf.name
         FROM admission a
-        JOIN wards w ON a.ward_id = w.id 
+        JOIN wards w ON a.ward_id = w.id
         JOIN health_facility hf ON w.facility_id = hf.id
         WHERE a.visit_id = %s
     """, [id])
     admission_rows = cursor.fetchall()
     if admission_rows:
-        data["admission"] = [{"admission_date": row[0], "discharge_date": row[1], "ward": row[2]} for row in admission_rows]
-    
+        data["admission"] = [
+            {"admission_date": r[0], "discharge_date": r[1], "ward": r[2]}
+            for r in admission_rows
+        ]
+
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsOwnerCitizenOrStaff])
 def current_prescriptions(request, citizen_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -204,6 +221,7 @@ def current_prescriptions(request, citizen_id):
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsOwnerCitizenOrStaff])
 def current_appointments(request, citizen_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -217,17 +235,6 @@ def current_appointments(request, citizen_id):
     rows = cursor.fetchall()
     data = [{"id": row[0], "visit_date": row[1], "facility": row[2], "reason": row[3]} for row in rows]
     return Response(data)
-
-@api_view(['POST'])
-def book_appointment(request):
-    cursor = connection.cursor()
-    cursor.execute("""
-        INSERT INTO visit (citizen_id, centre_id, visit_date, reason)
-        VALUES (%s, %s, %s, %s)
-    """, [request.data['citizen_id'], request.data['facility_id'], request.data['date'], request.data.get('reason', '')])
-    
-    visit_id = cursor.lastrowid
-    return Response({"visit_id": visit_id})
 
 @api_view(['GET'])
 def search_facilities(request):
@@ -274,9 +281,6 @@ def search_facilities(request):
     if (len(data) > 100):
         data = data[:100]  # limit to 100 results
     return Response(data)
-
-
-
 
 @api_view(['GET'])
 def available_facilities_state(request):
@@ -355,19 +359,22 @@ def get_cities(request):
     data = [row[0] for row in rows]
     return  Response(data)
 
-# ==========================================
-# WRITE DATA (POST REQUESTS)
-# ==========================================
-
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-
 @api_view(['POST'])
 def book_appointment(request):
     data = request.data
+    user = request.user
+    if not getattr(user, 'is_authenticated', False):
+        return Response({"error": "Authentication required"}, status=401)
+
+    citizen_id = data.get('citizen_id')
+    if not citizen_id:
+        return Response({"error": "Citizen ID is required"}, status=400)
+
+    if user.role == 'citizen' and str(user.id) != str(citizen_id):
+        return Response({"error": "Cannot book appointments for another citizen"}, status=403)
+    if user.role not in ('citizen', 'worker', 'admin'):
+        return Response({"error": "Forbidden"}, status=403)
     cursor = connection.cursor()
-    
-    
     citizen_id = data.get('citizen_id')
     if not citizen_id:
         return Response({"error": "Citizen ID is required"}, status=400)
@@ -380,6 +387,7 @@ def book_appointment(request):
     return Response({"message": "Appointment booked successfully!", "visit_id": visit_id}, status=201)
 
 @api_view(['POST'])
+@permission_classes([IsRole('worker','admin')])
 def create_visit(request):
     data = request.data
     cursor = connection.cursor()
@@ -394,6 +402,7 @@ def create_visit(request):
     return Response({"message": "Visit created successfully!", "visit_id": visit_id}, status=201)
 
 @api_view(['POST'])
+@permission_classes([IsRole('worker')])
 def create_diagnosis(request, visit_id):
     data = request.data
     cursor = connection.cursor()
@@ -404,11 +413,9 @@ def create_diagnosis(request, visit_id):
         """, [visit_id, data['disease_id'], data.get('description', '')])
     
     return Response({"message": "Success!", "visit_id": visit_id}, status=201)
-    
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
 
 @api_view(['POST'])
+@permission_classes([IsRole('worker')])
 def mark_appointment_done(request, visit_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -417,6 +424,7 @@ def mark_appointment_done(request, visit_id):
     return Response({"message": "Visit marked as done!"})
 
 @api_view(['POST'])
+@permission_classes([IsRole('worker')])
 def create_prescription(request, visit_id):
     data = request.data
     cursor = connection.cursor()
@@ -429,6 +437,7 @@ def create_prescription(request, visit_id):
     return Response({"message": "Success!", "visit_id": visit_id}, status=201)
 
 @api_view(['POST'])
+@permission_classes([IsRole('worker')])
 def create_lab_order(request, visit_id):
     data = request.data
     cursor = connection.cursor()
@@ -441,6 +450,7 @@ def create_lab_order(request, visit_id):
     return Response({"message": "Lab order created!", "visit_id": visit_id}, status=201)
 
 @api_view(['POST'])
+@permission_classes([IsRole('worker')])
 def create_procedure(request, visit_id):
     data = request.data
     cursor = connection.cursor()
@@ -453,32 +463,8 @@ def create_procedure(request, visit_id):
     
     return Response({"message": "Procedure recorded!", "visit_id": visit_id}, status=201)
 
-
 @api_view(['GET'])
-def get_facilities(request):
-    cursor = connection.cursor()
-    cursor.execute("""
-        SELECT hf.id, hf.name, hf.type, p.city
-        FROM health_facility hf
-        JOIN place p ON hf.id = p.id
-    """)
-    
-    rows = cursor.fetchall()
-    data = [
-        {
-            "id": row[0],
-            "name": row[1],
-            "type": row[2],
-            "city": row[3]
-        } for row in rows
-    ]
-    return Response(data)
-
-# ==========================================
-# READ DATA (GET REQUESTS)
-# ==========================================
-
-@api_view(['GET'])
+@permission_classes([IsOwnerCitizenOrStaff])
 def vaccination_history(request, citizen_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -502,6 +488,7 @@ def vaccination_history(request, citizen_id):
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsRole('worker', 'admin')])
 def citizen_medical_history(request, aadhar_no):
     cursor = connection.cursor()
     cursor.execute("""
@@ -517,12 +504,8 @@ def citizen_medical_history(request, aadhar_no):
     data = [{"id": row[0], "visit_date": row[1], "facility": row[2], "reason": row[3], "diagnoses": []} for row in rows]
     return Response(data)
 
-    
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from datetime import date
-
 @api_view(['GET'])
+@permission_classes([IsOwnerCitizenOrStaff])
 def eligible_vaccines(request, citizen_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -550,11 +533,8 @@ def eligible_vaccines(request, citizen_id):
     data = [{"id": row[0], "name": row[1]} for row in rows]
     return Response(data)
 
-# ==========================================
-# ANALYTICS & DASHBOARD (GET REQUESTS)
-# ==========================================
-
 @api_view(['GET'])
+@permission_classes([IsRole('worker','admin')])
 def disease_geographic_stats(request, disease_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -615,9 +595,8 @@ def get_medicines(request):
     data = [{"id": row[0], "name": row[1], "type":row[2]} for row in rows]
     return Response(data)
 
-
-
 @api_view(['POST'])
+@permission_classes([IsRole('worker')])
 def create_vaccination(request, visit_id):
     cursor = connection.cursor()
     cursor.execute("""

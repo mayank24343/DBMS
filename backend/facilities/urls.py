@@ -17,7 +17,6 @@ from .views import (
     # inventory
     facility_inventory,
     near_expiry,
-    log_usage,
 
     # admissions & transfers
     admit_patient,
@@ -65,7 +64,6 @@ urlpatterns = [
     # ================= INVENTORY =================
     path('facility/<int:fac_id>/inventory/', facility_inventory, name='facility-inventory'),
     path('facility/<int:fac_id>/expiry/', near_expiry, name='facility-expiry'),
-    path('facility/usage/', log_usage, name='facility-usage'),
 
     # ================= ADMISSION / TRANSFER =================
     path('admission/', admit_patient, name='admit-patient'),
