@@ -10,9 +10,11 @@ import {
   FileText,
   Users 
 } from 'lucide-react';
+import {authAPI} from '../services/api';
 
 const CitizenDashboard = () => {
-  const citizenId = localStorage.getItem("citizen_id");
+  const currentUser = authAPI.getCurrentUser();
+  const citizenId = currentUser?.id;
   const [stats, setStats] = useState({
     totalVisits: 0,
     totalVaccines: 0,

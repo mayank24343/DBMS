@@ -42,6 +42,10 @@ export const authAPI = {
     localStorage.setItem('auth_role', returnedRole);
     if (userId !== undefined) {
       localStorage.setItem('auth_user_id', userId);
+      
+    }
+    if (rest.facility_id !== undefined && rest.facility_id !== null) {
+      localStorage.setItem('facility_id', rest.facility_id);
     }
     return response.data;
   },

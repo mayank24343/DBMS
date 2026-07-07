@@ -42,11 +42,18 @@ function PatientWrapper() {
   return <MedicalHistory citizenId={citizenId} />;
 }
 
+function getHomeRoute(role) {
+  if (role === 'citizen') return '/citizen/dashboard';
+  if (role === 'worker') return '/facility-dashboard';
+  if (role === 'admin') return '/admin';
+  return '/directory'; // safe fallback, always a valid route
+}
+
 // Guards a single route by role. Renders children if allowed,
 // otherwise bounces to a safe default for that user.
 function RequireRole({ roles, user, children }) {
   if (!roles.includes(user.role)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={getHomeRoute(user.role)} replace />;
   }
   return children;
 }
@@ -75,7 +82,7 @@ function App() {
         <div className="min-h-screen bg-gray-50 flex flex-col">
           <nav className="bg-blue-800 text-white px-6 py-4 shadow-lg flex justify-between items-center">
             <div className="flex items-center gap-6">
-              <h1 className="text-xl font-black tracking-wide">National Health System</h1>
+              <h1 className="text-xl font-black tracking-wide">INHIS</h1>
 
               <div className="hidden md:flex space-x-6 text-sm font-semibold text-blue-200">
                 <Link to="/directory" className="hover:text-blue-200 transition-colors">Service Directory</Link>
@@ -105,9 +112,14 @@ function App() {
 
           <main className="flex-grow">
             <Routes>
+            
+              <Route path="/" element={<Navigate to={getHomeRoute(currentUser.role)} replace />} />
+  
+
               {/* Public to any authenticated role */}
               <Route path="/directory" element={<ServiceDirectory />} />
               <Route path="/visit/:visitId" element={<VisitDetails />} />
+              
 
               {/* Citizen-only */}
               <Route path="/citizen/dashboard" element={
@@ -205,7 +217,7 @@ function App() {
                 <RequireRole roles={['admin']} user={currentUser}><FacilityWorkers /></RequireRole>
               } />
 
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to={getHomeRoute(currentUser.role)} replace />} />
             </Routes>
           </main>
         </div>

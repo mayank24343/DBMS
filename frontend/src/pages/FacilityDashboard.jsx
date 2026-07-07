@@ -19,37 +19,35 @@ const FacilityDashboard = () => {
   }, [facilityId]);
 
   const loadDashboardData = async () => {
-    setLoading(true);
-    try {
-      // Facility details
-      const facilityData = await facilityAPI.getFacility(facilityId);
-      setFacility(facilityData);
-      
-      // Occupancy
-      const occData = await facilityAPI.fetchOccupancy(facilityId);
-      setOccupancy(occData);
-      
-      // Today's appointments
-      const appts = await facilityAPI.fetchAppointments(facilityId);
-      setAppointments(appts);
-      
-      // Inventory alerts
-      const low = await facilityAPI.fetchLowStock(facilityId);
-      setLowStock(low);
-      
-      const expiry = await facilityAPI.fetchNearExpiry(facilityId);
-      setNearExpiry(expiry);
-      console.log(expiry);
-    } catch (err) {
-      console.error('Dashboard load failed:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Mock API calls - replace with real endpoints
+  setLoading(true);
+  try {
+    const [facilityData, occData, appts, low, expiry] = await Promise.all([
+      facilityAPI.getFacility(facilityId),
+      facilityAPI.fetchOccupancy(facilityId),
+      facilityAPI.fetchAppointments(facilityId),
+      facilityAPI.fetchLowStock(facilityId),
+      facilityAPI.fetchNearExpiry(facilityId),
+    ]);
+    setFacility(facilityData);
+    setOccupancy(occData);
+    setAppointments(appts);
+    setLowStock(low);
+    setNearExpiry(expiry);
+  } catch (err) {
+    console.error('Dashboard load failed:', err);
+  } finally {
+    setLoading(false);
+  }
+};
   
-  if (loading) return <div>Loading dashboard...</div>;
+ if (!facilityId) {
+  return (
+    <div className="min-h-screen flex items-center justify-center text-gray-600">
+      No facility associated with this account. Please log in again.
+    </div>
+  );
+}
+if (loading) return <div>Loading dashboard...</div>;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
