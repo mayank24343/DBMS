@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from django.db import connection
 from django.db import transaction
 from datetime import date, timedelta
+from django.db.models.functions import ExtractMonth
 
 from datetime import datetime
 import pytz
@@ -740,8 +741,6 @@ def disease_daily(request, disease_id):
         "cases": count
     })
 
-from django.db.models.functions import ExtractMonth
-
 @api_view(['GET'])
 @permission_classes([IsRole('worker', 'admin')])
 def disease_monthly_avg(request, disease_id):
@@ -779,3 +778,142 @@ def visit_id(request, visit_id):
         return Response({"error": "Visit not found"}, status=404)
     
     return Response({"citizen_id": row[0], "facility_id":row[1]})
+
+@api_view(['POST'])
+@permission_classes([IsRole('admin')])
+def add_facility(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO place (addr_l1, addr_l2, city, state, postal_code, latitude, longitude)
+        VALUES (%s, NULL, %s, %s, %s, %s, %s)
+    """, [request.data['addr_l1'], request.data['city'], request.data['state'], request.data['postal_code'], request.data['latitude'], request.data['longitude']])
+    
+    place_id = cursor.lastrowid
+    cursor.execute("""
+        INSERT INTO health_facility (id, name, type)
+        VALUES (%s, %s, %s)
+    """, [place_id, request.data['name'], request.data['type']])
+    
+    return Response({"facility_id": place_id})
+
+@api_view(['POST'])
+@permission_classes([IsRole('admin')])
+def add_facility_contact(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO healthfac_contact (healthfac_id, email, phone, is_primary)
+        VALUES (%s, %s, %s, %s)
+    """, [request.data['facility_id'], request.data.get('email'), request.data.get('phone'), request.data.get('is_primary', False)])
+    
+    contact_id = cursor.lastrowid
+    return Response({"id": contact_id})
+
+@api_view(['POST'])
+@permission_classes([IsRole('admin')])
+def assign_worker(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO works (worker_id, fac_id, start_date)
+        VALUES (%s, %s, %s)
+    """, [request.data['worker_id'], request.data['facility_id'], request.data['start_date']])
+    return Response({"status": "assigned"})
+
+@api_view(['POST'])
+@permission_classes([IsRole('admin')])
+def unassign_worker(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        UPDATE works 
+        SET end_date = %s 
+        WHERE worker_id = %s AND fac_id = %s AND end_date IS NULL
+    """, [request.data['end_date'], request.data['worker_id'], request.data['facility_id']])
+    return Response({"status": "unassigned"})
+
+@api_view(['GET'])
+@permission_classes([IsRole('worker','admin')])
+def get_facility_workers(request, fac_id):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT w.worker_id, hw.id as user_id, hw.name, hw.role, s.name
+        FROM works w
+        JOIN healthcareworker hw ON w.worker_id = hw.id
+                   JOIN skills s ON hw.id = s.worker_id
+        WHERE w.fac_id = %s AND w.end_date IS NULL
+    """, [fac_id])
+    
+    rows = cursor.fetchall()
+    
+    # Use a dictionary to group everything by worker_id temporarily
+    workers_dict = {}
+    
+    for row in rows:
+        worker_id = row[1]
+        name = row[2]
+        role = row[3]
+        skill = row[4]
+        
+        # If we haven't seen this worker yet, create their entry
+        if worker_id not in workers_dict:
+            workers_dict[worker_id] = {
+                "worker_id": worker_id,
+                "name": name,
+                "role": role,
+                "skills": [] # Start with an empty list for skills
+            }
+            
+        # Append the skill to the worker's skills list (checking if it's not None)
+        if skill:
+            workers_dict[worker_id]["skills"].append(skill)
+            
+    # Convert the grouped dictionary values back into the final list format
+    data = list(workers_dict.values())
+
+    return Response(data)
+
+@api_view(['GET'])
+def get_all_facilities(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT id, name, type
+        FROM health_facility
+    """)
+    
+    rows = cursor.fetchall()
+    data = [
+        {
+            "id": row[0],
+            "name": row[1],
+            "type": row[2]
+        }
+        for row in rows
+    ]
+    return Response(data)
+
+@api_view(['GET'])
+@permission_classes([IsOwnerCitizenOrStaff])
+def get_facility_contacts(request, facility_id):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT id, email, phone, is_primary
+        FROM healthfac_contact 
+        WHERE healthfac_id = %s
+    """, [facility_id])
+    
+    rows = cursor.fetchall()
+    data = [
+        {
+            "id": row[0],
+            "email": row[1],
+            "phone": row[2],
+            "is_primary": row[3]
+        }
+        for row in rows
+    ]
+    return Response(data)
+
+@api_view(['DELETE'])
+@permission_classes([IsRole('admin')])
+def delete_facility_contact(request, id):
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM healthfac_contact WHERE id = %s", [id])
+    return Response({"status": "deleted"})
