@@ -132,6 +132,7 @@ CREATE TABLE visit (
     centre_id BIGINT UNSIGNED NOT NULL,
     visit_date DATE NOT NULL,
     reason TEXT,
+	status VARCHAR(30) DEFAULT 'done',
 	FOREIGN KEY (citizen_id) REFERENCES citizen(citizen_id),
 	FOREIGN KEY (centre_id) REFERENCES health_facility(id)
 );
