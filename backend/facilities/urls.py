@@ -1,5 +1,8 @@
 from django.urls import path
 from .views import (
+    add_facility, add_facility_contact,
+    assign_worker, unassign_worker, get_facility_workers,
+    get_all_facilities, get_facility_contacts, delete_facility_contact,
     # basic
     get_current_visit_admit,
     get_facility,
@@ -17,7 +20,6 @@ from .views import (
     # inventory
     facility_inventory,
     near_expiry,
-    log_usage,
 
     # admissions & transfers
     admit_patient,
@@ -45,6 +47,16 @@ from .views import (
 )
 
 urlpatterns = [
+    path('facility/add/', add_facility),
+    path('facility/contact/add/', add_facility_contact),
+    path('facility/<int:facility_id>/contacts/', get_facility_contacts),
+    path('facility/contact/delete/<int:id>/', delete_facility_contact),
+
+    path('worker/assign/', assign_worker),
+    path('worker/unassign/', unassign_worker),
+
+    path('facility/<int:fac_id>/workers/', get_facility_workers),
+    path('all-facilities/', get_all_facilities),
 
     # ================= BASIC =================
     path('facility/<int:id>/', get_facility, name='facility-detail'),
@@ -65,7 +77,6 @@ urlpatterns = [
     # ================= INVENTORY =================
     path('facility/<int:fac_id>/inventory/', facility_inventory, name='facility-inventory'),
     path('facility/<int:fac_id>/expiry/', near_expiry, name='facility-expiry'),
-    path('facility/usage/', log_usage, name='facility-usage'),
 
     # ================= ADMISSION / TRANSFER =================
     path('admission/', admit_patient, name='admit-patient'),
@@ -87,7 +98,6 @@ urlpatterns = [
     path('facility/<int:fac_id>/patients/admitted/', admitted_patients),
     path('facility/<int:fac_id>/inventory/low/', low_inventory),
     path('visit/id/<int:visit_id>/', visit_id),
-
 
     # disease analytics
     path('stats/disease/<int:disease_id>/geo/', disease_geo),

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Building, Bed, AlertCircle, Search, LayoutGrid } from 'lucide-react';
+import api from '../services/api';
 
 const AvailableFacilities = () => {
   const [filterMode, setFilterMode] = useState('state'); // 'state' or 'city'
@@ -10,7 +11,6 @@ const AvailableFacilities = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // 1. Fetch the dropdown options whenever the filter mode (State/City) changes
   useEffect(() => {
     const fetchRegions = async () => {
       setLoading(true);
@@ -19,16 +19,12 @@ const AvailableFacilities = () => {
       setFacilities([]);     // Clear table
 
       try {
-        // Replace with your actual Django API endpoints
-        const endpoint = filterMode === 'state' 
-          ? 'api/states/' 
-          : 'api/cities/';          
-          
+        const endpoint = filterMode === 'state'
+          ? 'api/states/'
+          : 'api/cities/';
+
         const response = await api.get(endpoint);
-        if (response.status !== 200) throw new Error('Failed to fetch regions');
-        
-        const data = await response.json();
-        setRegionOptions(data);
+        setRegionOptions(response.data);
       } catch (err) {
         console.error(err);
         setError(`Could not load ${filterMode} list. Please try again.`);
@@ -52,17 +48,19 @@ const AvailableFacilities = () => {
       setError('');
 
       try {
-        // Replace with your actual Django API endpoints
         const endpoint = filterMode === 'state'
-          ? `api/facilities/available/state/?state=${encodeURIComponent(selectedRegion)}`
-          : `api/facilities/available/city/?city=${encodeURIComponent(selectedRegion)}`;
+          ? 'api/facilities/available/state/'
+          : 'api/facilities/available/city/';
 
-        const response = await api.get(endpoint);
-        if (response.status !== 200) throw new Error('Failed to fetch facilities');
-        
-        const data = await response.json();
-        setFacilities(data);
+        const response = await api.get(endpoint, {
+          params: filterMode === 'state'
+            ? { state: selectedRegion }
+            : { city: selectedRegion }
+        });
+
+        setFacilities(response.data);
       } catch (err) {
+        console.error(err);
         setError('Could not load facility data for this region.');
       } finally {
         setLoading(false);

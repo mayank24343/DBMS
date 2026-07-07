@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { citizenAPI } from '../services/api';
 import { CalendarClock, ArrowLeft, MapPin, Stethoscope } from 'lucide-react';
+import api from '../services/api';
 
 const BookAppointment = () => {
     const navigate = useNavigate();

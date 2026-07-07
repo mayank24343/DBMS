@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import  create_visit, create_diagnosis, book_appointment, current_appointments, current_prescriptions, eligible_vaccines, lab_reports, medical_history, search_facilities, visit_detail
-from .views import get_facilities, vaccination_history
+from .views import create_visit, create_diagnosis, book_appointment, current_appointments, current_prescriptions, eligible_vaccines, lab_reports, medical_history, search_facilities, visit_detail
+from .views import vaccination_history
 from .views import get_all_diseases, get_lab_tests, get_procedures, get_medicines, create_prescription, create_lab_order, create_procedure, create_vaccination
 from .views import available_facilities_state, available_facilities_city, get_cities, get_states, mark_appointment_done
     
@@ -27,7 +27,6 @@ urlpatterns = [
     path('api/procedure/<int:visit_id>/', create_procedure, name='create-visit-with-procedure'),
     path('api/vaccination/<int:visit_id>/', create_vaccination, name='create-visit-with-vaccination'),
    
-    path('api/facilities/', get_facilities),
     path('api/diseases/', get_all_diseases),
     path('api/lab-tests/', get_lab_tests),
     path('api/procedures/', get_procedures),

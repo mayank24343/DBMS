@@ -1,6 +1,6 @@
 CREATE TABLE users(
-	id SERIAL PRIMARY KEY,
-	password VARCHAR(50),
+	userid SERIAL PRIMARY KEY,
+	password_hash VARCHAR(255) NOT NULL,
 	role VARCHAR(20)
 );
 
@@ -29,7 +29,7 @@ CREATE TABLE citizen (
     postal_code CHAR(6) NOT NULL,
     latitude DECIMAL(9,6) NOT NULL,
     longitude DECIMAL(9,6) NOT NULL,
-	FOREIGN KEY (citizen_id) references users(id)
+	FOREIGN KEY (citizen_id) references users(userid)
 );
 
 CREATE TABLE citizen_contact (
@@ -70,7 +70,7 @@ CREATE TABLE supplier (
     postal_code CHAR(6) NOT NULL,
     latitude DECIMAL(9,6) NOT NULL,
     longitude DECIMAL(9,6) NOT NULL,
-	FOREIGN KEY (id) references users(id)
+	FOREIGN KEY (id) references users(userid)
 );
 
 CREATE TABLE supplier_contact (
@@ -105,7 +105,7 @@ CREATE TABLE healthcareworker (
     id BIGINT UNSIGNED,
     name VARCHAR(100) NOT NULL,
     role VARCHAR(50) NOT NULL,
-	FOREIGN KEY (id) references users(id)
+	FOREIGN KEY (id) references users(userid)
 );
 
 CREATE TABLE works (
@@ -132,6 +132,7 @@ CREATE TABLE visit (
     centre_id BIGINT UNSIGNED NOT NULL,
     visit_date DATE NOT NULL,
     reason TEXT,
+	status VARCHAR(30) DEFAULT 'done',
 	FOREIGN KEY (citizen_id) REFERENCES citizen(citizen_id),
 	FOREIGN KEY (centre_id) REFERENCES health_facility(id)
 );
@@ -351,3 +352,11 @@ CREATE TABLE inventory_transfer (
 	FOREIGN KEY (to_id) REFERENCES health_facility(id)
 );
 
+CREATE TABLE auth_token (
+    id SERIAL PRIMARY KEY,
+    `key` VARCHAR(64) UNIQUE NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
+    role VARCHAR(20) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(userid) ON DELETE CASCADE
+);

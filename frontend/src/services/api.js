@@ -1,26 +1,87 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
+// --- Attach token to every outgoing request ---
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    config.headers.Authorization = `Token ${token}`;
+  }
+  return config;
+});
+
+// --- Handle expired/invalid tokens globally ---
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_role');
+      localStorage.removeItem('auth_user_id');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+// --- Auth ---
+export const authAPI = {
+  login: async (identifier, password, role) => {
+    const response = await api.post('api/login/', { identifier, password, role });
+    const { token, role: returnedRole, ...rest } = response.data;
+    const userId = rest.citizen_id ?? rest.worker_id ?? rest.id;
+
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('auth_role', returnedRole);
+    if (userId !== undefined) {
+      localStorage.setItem('auth_user_id', userId);
+      
+    }
+    if (rest.facility_id !== undefined && rest.facility_id !== null) {
+      localStorage.setItem('facility_id', rest.facility_id);
+    }
+    return response.data;
+  },
+
+  logout: () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_role');
+    localStorage.removeItem('auth_user_id');
+  },
+
+  getCurrentUser: () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return null;
+    return {
+      token,
+      role: localStorage.getItem('auth_role'),
+      id: localStorage.getItem('auth_user_id'),
+    };
+  },
+};
+
 export const citizenAPI = {
   medicalHistory: async (citizenId) => {
-    const response = await api.get('api/history/<int:citizen_id>/'.replace('<int:citizen_id>', citizenId));
+    const response = await api.get(`api/history/${citizenId}/`);
     return response.data;
   },
   vaccinationHistory: async (citizenId) => {
-    const response = await api.get('api/vaccinations/<int:citizen_id>/'.replace('<int:citizen_id>', citizenId));
+    const response = await api.get(`api/vaccinations/${citizenId}/`);
     return response.data;
   },
   eligibleVaccines: async (citizenId) => {
-    const response = await api.get('api/vaccines/eligible/<int:citizen_id>/'.replace('<int:citizen_id>', citizenId));
+    const response = await api.get(`api/vaccines/eligible/${citizenId}/`);
     return response.data;
   },
   visitDetail: async (visitId) => {
-    const response = await api.get('api/visit/<int:id>/'.replace('<int:id>', visitId));
+    const response = await api.get(`api/visit/${visitId}/`);
     return response.data;
   },
   bookAppointment: async (appointmentData) => {
@@ -34,11 +95,11 @@ export const citizenAPI = {
     return response.data;
   },
   currentAppointments: async (citizenId) => {
-    const response = await api.get('api/current/appointments/<int:citizen_id>/'.replace('<int:citizen_id>', citizenId));
+    const response = await api.get(`api/current/appointments/${citizenId}/`);
     return response.data;
   },
   currentPrescriptions: async (citizenId) => {
-    const response = await api.get('api/current/prescriptions/<int:citizen_id>/'.replace('<int:citizen_id>', citizenId));
+    const response = await api.get(`api/current/prescriptions/${citizenId}/`);
     return response.data;
   }
 };
@@ -80,7 +141,7 @@ export const facilityAPI = {
   },
   getWardAvailability: async (facId) => {
     const response = await api.get(`api/wards/${facId}/`);
-    return response.data;   
+    return response.data;
   },
   admittedPatients: async (facId) => {
     const response = await api.get(`api/facility/${facId}/patients/admitted/`);
@@ -96,16 +157,11 @@ export const facilityAPI = {
   },
   currentAllPatients: async (facId) => {
     const response = await api.get(`api/facility/get-current-patient/${facId}`);
-    return response.data; 
-  },
-
-  logUsage: async (item_id, facility_id, quantity) => {
-    const response = await api.post('api/facility/usage/', { item_id,  facility_id, quantity });
     return response.data;
   },
 
-  getBestSuppliers: async (item_id, required_qty) => {
-    const response = await api.post('api/get_best_suppliers/', { item_id, required_qty });
+  logUsage: async (item_id, facility_id, quantity) => {
+    const response = await api.post('api/facility/usage/', { item_id, facility_id, quantity });
     return response.data;
   },
 
@@ -130,7 +186,7 @@ export const facilityAPI = {
     return response.data;
   },
   submitLabResult: async (orderId, resultText) => {
-    const response = await api.post(`api/lab/result/`, { result: resultText, order_id: orderId });
+    const response = await api.post('api/lab/result/', { result: resultText, order_id: orderId });
     return response.data;
   }
 };
@@ -138,11 +194,11 @@ export const facilityAPI = {
 export const getLowStockAlerts = async (facId) => {
   const response = await api.get(`inventory/api/alerts/low-stock/${facId}/`);
   return response.data;
-}
+};
 
 export const getNearExpiryAlerts = async (facId) => {
   const response = await api.get(`inventory/api/alerts/expiry/${facId}/`);
   return response.data;
-}
+};
 
 export default api;

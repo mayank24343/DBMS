@@ -1,7 +1,21 @@
 import random
 from datetime import datetime, timedelta
 
-f = open("seed.sql","w")
+import django
+from django.conf import settings
+
+# 1. Configure minimal settings before importing Django utilities
+if not settings.configured:
+    settings.configure(
+        SECRET_KEY='a-dummy-secret-key-for-standalone-script',
+        PASSWORD_HASHERS=['django.contrib.auth.hashers.PBKDF2PasswordHasher']
+)
+
+from django.contrib.auth.hashers import make_password
+# run once, or just hardcode a precomputed hash for "password" here
+DEFAULT_HASH = make_password("password")
+
+f = open("finakseed.sql","w")
 
 def rand_date(start, end):
     delta = end - start
@@ -346,7 +360,7 @@ cities = [
 #40 suppliers 
 for i in range(1,41):
     index = i 
-    f.write(f"INSERT INTO users(id,password,role) VALUES ({index},'password','supplier');\n")
+    f.write(f"INSERT INTO users(userid,password_hash,role) VALUES ({index},'{DEFAULT_HASH}','supplier');\n")
 
     city,state=random.choice(cities)
     lat=round(random.uniform(12,29),6)
@@ -433,7 +447,7 @@ for i in range(10):
 
         for k in range(6):
             wid += 1
-            f.write(f"INSERT INTO users(id,password,role) VALUES ({wid},'password','worker');\n")
+            f.write(f"INSERT INTO users(userid,password_hash,role) VALUES ({wid},'{DEFAULT_HASH}','worker');\n")
             f.write(f"""INSERT INTO healthcareworker VALUES({wid},'Worker{wid}','Doctor');\n""")
             f.write(f"""INSERT INTO works VALUES(default, {wid},{i*10+j},'2020-01-01',NULL);\n""")
             f.write(f"""INSERT INTO skills VALUES(default,{wid},'MBBS','qualification');\n""")
@@ -443,7 +457,7 @@ for i in range(10):
                 
         for k in range(10):
             wid += 1
-            f.write(f"INSERT INTO users(id,password,role) VALUES ({wid},'password','worker');\n")
+            f.write(f"INSERT INTO users(userid,password_hash,role) VALUES ({wid},'{DEFAULT_HASH}','worker');\n")
             f.write(f"""INSERT INTO healthcareworker VALUES({wid},'Worker{wid}','Nurse');\n""")
             f.write(f"""INSERT INTO works VALUES(default,{wid},{i*10+j},'2020-01-01',NULL);\n""")
             f.write(f"""INSERT INTO skills VALUES(default,{wid},'B.Sc. Nursing','qualification');\n""")
@@ -471,7 +485,7 @@ for i in range(10):
             f.write(f"INSERT INTO inventory VALUES (default,{i*10+j},{30+k},{random.randint(1,20)*100},'9999-12-31',default);\n")
         for k in range(1):
             wid += 1
-            f.write(f"INSERT INTO users(id,password,role) VALUES ({wid},'password','worker');\n")
+            f.write(f"INSERT INTO users(userid,password_hash,role) VALUES ({wid},'{DEFAULT_HASH}','worker');\n")
             f.write(f"""INSERT INTO healthcareworker VALUES({wid},'Worker{wid}','Doctor');\n""")
             f.write(f"""INSERT INTO works VALUES(default,{wid},{i*10+j},'2020-01-01',NULL);\n""")
             f.write(f"""INSERT INTO skills VALUES(default,{wid},'MBBS','qualification');\n""")
@@ -480,7 +494,7 @@ for i in range(10):
             docs[i*10+j].append(wid)
         for k in range(2):
             wid += 1
-            f.write(f"INSERT INTO users(id,password,role) VALUES ({wid},'password','worker');\n")
+            f.write(f"INSERT INTO users(userid,password_hash,role) VALUES ({wid},'{DEFAULT_HASH}','worker');\n")
             f.write(f"""INSERT INTO healthcareworker VALUES({wid},'Worker{wid}','Doctor');\n""")
             f.write(f"""INSERT INTO works VALUES(default,{wid},{i*10+j},'2020-01-01',NULL);\n""")
             f.write(f"""INSERT INTO skills VALUES(default,{wid},'MBBS','qualification');\n""")
@@ -506,7 +520,7 @@ for i in range(10):
 
         for k in range(2):
             wid += 1
-            f.write(f"INSERT INTO users(id,password,role) VALUES ({wid},'password','worker');\n")
+            f.write(f"INSERT INTO users(userid,password_hash,role) VALUES ({wid},'{DEFAULT_HASH}','worker');\n")
             f.write(f"""INSERT INTO healthcareworker VALUES({wid},'Worker{wid}','Pharmacist');\n""")
             f.write(f"""INSERT INTO works VALUES(default,{wid},{i*10+j},'2020-01-01',NULL);\n""")
             f.write(f"""INSERT INTO skills VALUES(default,{wid},'B.Pharm','qualification');\n""")
@@ -522,7 +536,7 @@ for i in range(10):
             f.write(f"INSERT INTO lab_test_provided VALUES (default,{p},{i*10+j});\n")
         for k in range(2):
             wid += 1
-            f.write(f"INSERT INTO users(id,password,role) VALUES ({wid},'password','worker');\n")
+            f.write(f"INSERT INTO users(userid,password_hash,role) VALUES ({wid},'{DEFAULT_HASH}','worker');\n")
             f.write(f"""INSERT INTO healthcareworker VALUES({wid},'Worker{wid}','Lab Tech');\n""")
             f.write(f"""INSERT INTO works VALUES(default,{wid},{i*10+j},'2020-01-01',NULL);\n""")
             f.write(f"""INSERT INTO skills VALUES(default,{wid},'B.Sc. Microbiology','qualification');\n""")
@@ -552,7 +566,7 @@ oid = 0
 #1000 citizens
 for i in range(1,1001):
     index = wid+i
-    f.write(f"INSERT INTO users(id,password,role) VALUES ({index},'password','citizen');\n")
+    f.write(f"INSERT INTO users(userid,password_hash,role) VALUES ({index},'{DEFAULT_HASH}','citizen');\n")
 
     city,state=random.choice(cities)
     dob = rand_date(datetime(1970,1,1),datetime(2024,1,1)).date()
@@ -708,6 +722,10 @@ for i in range(1,1001):
                 f.write(f"INSERT INTO doctor_visit VALUES(default,{vid},{random.choice(docs[centre])},'Attending');\n")
     
         f.write(f"UPDATE wards SET occupied = occupied+1 WHERE facility_id={centre} AND type='Emergency';\n")
+
+
+ADMIN_ID = wid + 1001  # after citizens, or pick any unused id
+f.write(f"INSERT INTO users(userid,password_hash,role) VALUES ({ADMIN_ID},'{DEFAULT_HASH}','admin');\n")
 
    
 

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'corsheaders',
+    'rest_framework.authtoken',
     
     # third-party apps
     'rest_framework',
@@ -66,7 +67,15 @@ MIDDLEWARE = [
 ]
 CORS_ALLOW_ALL_ORIGINS = True
 ROOT_URLCONF = 'config.urls'
-
+# settings.py
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization", # Must be present
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -91,7 +100,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'dbms',
+        'NAME': 'inhis',
         'USER': 'root',
         'PASSWORD': '@F83B821Ssmall',
         'HOST': 'localhost',
@@ -122,6 +131,16 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# settings.py
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        # This matches the frontend 'Token <token>' format
+        'accounts.authentication.TokenAuth', 
+        # Optional: keep session auth if you use the browsable API admin
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
@@ -132,7 +151,7 @@ TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)

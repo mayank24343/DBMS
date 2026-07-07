@@ -1,12 +1,14 @@
 # backend/facilities/views.py
 from datetime import date
 
-from rest_framework.decorators import api_view
+from accounts.permissions import IsOwnerCitizenOrStaff, IsRole
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from django.db import connection
 from django.db import transaction
 from datetime import date, timedelta
+from django.db.models.functions import ExtractMonth
 
 from datetime import datetime
 import pytz
@@ -57,9 +59,8 @@ def facility_contacts(request, id):
     ]
     return Response(data)
 
-from datetime import date
-
 @api_view(['GET'])
+@permission_classes([IsRole('worker','admin')])
 def today_appointments(request, fac_id):
     cursor = connection.cursor()
     today = date.today()
@@ -123,6 +124,7 @@ def facility_occupancy(request, fac_id):
     })
 
 @api_view(['GET'])
+@permission_classes([IsRole('worker','admin')])
 def ward_admitted_patients(request, fac_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -143,6 +145,7 @@ def ward_admitted_patients(request, fac_id):
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsRole('worker','admin')])
 def get_citizen(request, patient_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -160,8 +163,8 @@ def get_citizen(request, patient_id):
         "gender": row[3]
     })
 
-
 @api_view(['GET'])
+@permission_classes([IsOwnerCitizenOrStaff])
 def citizen_history(request, citizen_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -182,6 +185,7 @@ def citizen_history(request, citizen_id):
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsOwnerCitizenOrStaff])
 def citizen_lab_tests(request, citizen_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -198,6 +202,7 @@ def citizen_lab_tests(request, citizen_id):
 
 #redundant 
 @api_view(['POST'])
+@permission_classes([IsRole('worker')])
 def add_diagnosis(request, visit_id):
     cursor = connection.cursor()
     
@@ -225,6 +230,7 @@ def add_diagnosis(request, visit_id):
     return Response({"status": "done"})
 
 @api_view(['POST'])
+@permission_classes([IsRole('worker')])
 def add_procedure(request, visit_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -234,6 +240,7 @@ def add_procedure(request, visit_id):
     return Response({"status": "added"})
 
 @api_view(['GET'])
+@permission_classes([IsRole('worker','admin')])
 def facility_inventory(request, fac_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -254,9 +261,8 @@ def facility_inventory(request, fac_id):
     ]
     return Response(data)
 
-from datetime import timedelta
-
 @api_view(['GET'])
+@permission_classes([IsRole('worker','admin')])
 def near_expiry(request, fac_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -270,9 +276,6 @@ def near_expiry(request, fac_id):
     data = [{"item": row[0], "expiry": row[1], "quantity": row[2]} for row in rows]
     return Response(data)
 
-#tr
-@api_view(['POST'])
-def log_usage(request):
     cursor = connection.cursor()
     cursor.execute("""
         INSERT INTO item_use (item_id, fac_id, use_date, quantity)
@@ -284,6 +287,7 @@ def log_usage(request):
     return Response({"status": "logged"})
 
 @api_view(['GET'])
+@permission_classes([IsRole('worker','admin')])
 def get_lab_order_details(request, order_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -309,6 +313,7 @@ def get_lab_order_details(request, order_id):
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsRole('worker','admin')])
 def get_current_visit_admit(request, fac_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -322,7 +327,7 @@ def get_current_visit_admit(request, fac_id):
                    (SELECT v.id, v.visit_date, v.citizen_id, c.name
                     FROM visit v JOIN citizen c ON v.citizen_id = c.citizen_id
                     WHERE v.centre_id = %s AND v.visit_date = %s)
-    """,[fac_id, fac_id, today])
+    """,[fac_id, fac_id, date.today])
     
     rows = cursor.fetchall()
     data = [
@@ -336,12 +341,41 @@ def get_current_visit_admit(request, fac_id):
     ]
     return Response(data)
 
-#tr
-from django.db import transaction, connection
-from rest_framework import status
-
 @api_view(['POST'])
+@permission_classes([IsRole('worker')])
 def admit_patient(request):
+    try:
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                # Lock the ward row for the duration of the transaction
+                cursor.execute(
+                    "SELECT occupied, total FROM wards WHERE id = %s FOR UPDATE",
+                    [request.data['ward_id']]
+                )
+                row = cursor.fetchone()
+                if not row:
+                    return Response({"error": "Ward not found"}, status=404)
+
+                occupied, total = row
+                if occupied >= total:
+                    return Response({"error": "Ward full"}, status=400)
+
+                # Insert admission
+                cursor.execute("""
+                    INSERT INTO admission (citizen_id, visit_id, ward_id, admission_date)
+                    VALUES (%s, %s, %s, %s)
+                """, [request.data['citizen_id'], request.data['visit_id'],
+                      request.data['ward_id'], date.today()])
+
+                # Update visit status
+                cursor.execute("UPDATE visit SET status='done' WHERE id = %s", [request.data['visit_id']])
+
+                # Actually increment occupancy — this was missing
+                cursor.execute("UPDATE wards SET occupied = occupied + 1 WHERE id = %s", [request.data['ward_id']])
+
+        return Response({"status": "admitted"})
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
     try:
         with transaction.atomic():
             with connection.cursor() as cursor:
@@ -374,7 +408,39 @@ def admit_patient(request):
         return Response({"error": str(e)}, status=400)
 
 @api_view(['POST'])
+@permission_classes([IsRole('worker')])
 def discharge_patient(request):
+    with transaction.atomic():
+        with connection.cursor() as cursor:
+            # Lock the ward row via the active admission, fixing the missing ON clause
+            cursor.execute("""
+                SELECT w.id, w.facility_id
+                FROM admission a
+                JOIN wards w ON a.ward_id = w.id
+                WHERE a.visit_id = %s AND a.discharge_date IS NULL
+                FOR UPDATE
+            """, [request.data['visit_id']])
+            row = cursor.fetchone()
+
+            if not row:
+                return Response({"error": "No active admission found"}, status=404)
+
+            ward_id, facility_id = row
+            if facility_id != int(request.data['facility_id']):
+                return Response({"error": "Ward does not belong to this facility"}, status=400)
+
+            cursor.execute("""
+                UPDATE admission SET discharge_date = %s
+                WHERE visit_id = %s AND discharge_date IS NULL
+            """, [date.today(), request.data['visit_id']])
+
+            if cursor.rowcount == 0:
+                return Response({"error": "No active admission found"}, status=404)
+
+            # Actually decrement occupancy — this was missing
+            cursor.execute("UPDATE wards SET occupied = occupied - 1 WHERE id = %s", [ward_id])
+
+    return Response({"status": "discharged"})
     with transaction.atomic():
         with connection.cursor() as cursor:
             cursor.execute("""SELECT w.facility_id FROM wards w JOIN admission a WHERE a.ward_id = w.id AND a.visit_id = %s AND a.discharge_date IS NULL""", [request.data['visit_id']])
@@ -394,9 +460,55 @@ def discharge_patient(request):
                 
     return Response({"status": "discharged"})
 
-#tr 
 @api_view(['POST'])
+@permission_classes([IsRole('worker')])
 def transfer_patient(request):
+    data = request.data
+    try:
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                # Lock and check new ward
+                cursor.execute("SELECT occupied, total FROM wards WHERE id = %s FOR UPDATE", [data['ward_id']])
+                ward = cursor.fetchone()
+                if not ward or ward[0] >= ward[1]:
+                    return Response({"error": "Target ward full or missing"}, status=400)
+
+                cursor.execute(
+                    "SELECT ward_id FROM admission WHERE visit_id = %s AND discharge_date IS NULL FOR UPDATE",
+                    [data['visit_id']]
+                )
+                current = cursor.fetchone()
+                if not current:
+                    return Response({"error": "Patient not admitted"}, status=400)
+
+                old_ward_id = current[0]
+
+                # Discharge old admission
+                cursor.execute("""
+                    UPDATE admission SET discharge_date = %s
+                    WHERE visit_id = %s AND discharge_date IS NULL
+                """, [date.today(), data['visit_id']])
+
+                # Create new admission
+                cursor.execute("""
+                    INSERT INTO admission (citizen_id, visit_id, ward_id, admission_date)
+                    VALUES (%s, %s, %s, %s)
+                """, [data['citizen_id'], data['visit_id'], data['ward_id'], date.today()])
+
+                # Adjust occupancy on both wards — this was missing
+                cursor.execute("UPDATE wards SET occupied = occupied - 1 WHERE id = %s", [old_ward_id])
+                cursor.execute("UPDATE wards SET occupied = occupied + 1 WHERE id = %s", [data['ward_id']])
+
+                # Log transfer
+                cursor.execute("""
+                    INSERT INTO transfers (visit_id, citizen_id, from_fac, to_fac, date_of_transfer, reason)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, [data['visit_id'], data['citizen_id'], data['from_fac'],
+                      data['to_fac'], date.today(), data.get('reason', '')])
+
+        return Response({"status": "transferred"})
+    except Exception as e:
+        return Response({"error": "Transfer failed", "details": str(e)}, status=500)
     data = request.data
     try:
         with transaction.atomic():
@@ -439,6 +551,7 @@ def transfer_patient(request):
 
 
 @api_view(['GET'])
+@permission_classes([IsRole('worker','admin')])
 def inventory_usage_stats(request, fac_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -454,6 +567,7 @@ def inventory_usage_stats(request, fac_id):
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsRole('worker','admin')])
 def facility_disease_stats(request, fac_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -470,6 +584,7 @@ def facility_disease_stats(request, fac_id):
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsRole('worker','admin')])
 def appointment_stats(request, fac_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -483,10 +598,8 @@ def appointment_stats(request, fac_id):
     data = [{"visit_date": row[0], "count": row[1]} for row in rows]
     return Response(data)
 
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-
 @api_view(['GET'])
+@permission_classes([IsRole('worker','admin')])
 def pending_lab_tests(request, lab_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -510,9 +623,8 @@ def pending_lab_tests(request, lab_id):
     ]
     return Response(data)
 
-from datetime import date
-
 @api_view(['POST'])
+@permission_classes([IsRole('worker')])
 def submit_lab_result(request):
     cursor = connection.cursor()
     cursor.execute("""
@@ -522,6 +634,7 @@ def submit_lab_result(request):
     return Response({"status": "submitted"})
 
 @api_view(['GET'])
+@permission_classes([IsRole('worker')])
 def all_lab_tests(request, lab_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -545,6 +658,7 @@ def all_lab_tests(request, lab_id):
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsRole('worker', 'admin')])
 def admitted_patients(request, fac_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -568,6 +682,7 @@ def admitted_patients(request, fac_id):
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsRole('worker', 'admin')])
 def low_inventory(request, fac_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -588,6 +703,7 @@ def low_inventory(request, fac_id):
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsRole('worker', 'admin')])
 def disease_geo(request, disease_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -605,6 +721,7 @@ def disease_geo(request, disease_id):
     return Response(data)
 
 @api_view(['GET'])
+@permission_classes([IsRole('worker', 'admin')])
 def disease_daily(request, disease_id):
     date_str = request.GET.get('date')
     
@@ -624,9 +741,8 @@ def disease_daily(request, disease_id):
         "cases": count
     })
 
-from django.db.models.functions import ExtractMonth
-
 @api_view(['GET'])
+@permission_classes([IsRole('worker', 'admin')])
 def disease_monthly_avg(request, disease_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -650,6 +766,7 @@ def disease_monthly_avg(request, disease_id):
     return Response(result)
 
 @api_view(['GET'])
+@permission_classes([IsRole('worker', 'admin')])
 def visit_id(request, visit_id):
     cursor = connection.cursor()
     cursor.execute("""
@@ -662,13 +779,103 @@ def visit_id(request, visit_id):
     
     return Response({"citizen_id": row[0], "facility_id":row[1]})
 
-@api_view(['GET'])
-def get_suppliers(request):
+@api_view(['POST'])
+@permission_classes([IsRole('admin')])
+def add_facility(request):
     cursor = connection.cursor()
     cursor.execute("""
-        SELECT s.id, s.name, p.addr_l1, p.city, p.state
-        FROM supplier s
-        JOIN place p ON s.id = p.id
+        INSERT INTO place (addr_l1, addr_l2, city, state, postal_code, latitude, longitude)
+        VALUES (%s, NULL, %s, %s, %s, %s, %s)
+    """, [request.data['addr_l1'], request.data['city'], request.data['state'], request.data['postal_code'], request.data['latitude'], request.data['longitude']])
+    
+    place_id = cursor.lastrowid
+    cursor.execute("""
+        INSERT INTO health_facility (id, name, type)
+        VALUES (%s, %s, %s)
+    """, [place_id, request.data['name'], request.data['type']])
+    
+    return Response({"facility_id": place_id})
+
+@api_view(['POST'])
+@permission_classes([IsRole('admin')])
+def add_facility_contact(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO healthfac_contact (healthfac_id, email, phone, is_primary)
+        VALUES (%s, %s, %s, %s)
+    """, [request.data['facility_id'], request.data.get('email'), request.data.get('phone'), request.data.get('is_primary', False)])
+    
+    contact_id = cursor.lastrowid
+    return Response({"id": contact_id})
+
+@api_view(['POST'])
+@permission_classes([IsRole('admin')])
+def assign_worker(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        INSERT INTO works (worker_id, fac_id, start_date)
+        VALUES (%s, %s, %s)
+    """, [request.data['worker_id'], request.data['facility_id'], request.data['start_date']])
+    return Response({"status": "assigned"})
+
+@api_view(['POST'])
+@permission_classes([IsRole('admin')])
+def unassign_worker(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        UPDATE works 
+        SET end_date = %s 
+        WHERE worker_id = %s AND fac_id = %s AND end_date IS NULL
+    """, [request.data['end_date'], request.data['worker_id'], request.data['facility_id']])
+    return Response({"status": "unassigned"})
+
+@api_view(['GET'])
+@permission_classes([IsRole('worker','admin')])
+def get_facility_workers(request, fac_id):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT w.worker_id, hw.id as user_id, hw.name, hw.role, s.name
+        FROM works w
+        JOIN healthcareworker hw ON w.worker_id = hw.id
+                   JOIN skills s ON hw.id = s.worker_id
+        WHERE w.fac_id = %s AND w.end_date IS NULL
+    """, [fac_id])
+    
+    rows = cursor.fetchall()
+    
+    # Use a dictionary to group everything by worker_id temporarily
+    workers_dict = {}
+    
+    for row in rows:
+        worker_id = row[1]
+        name = row[2]
+        role = row[3]
+        skill = row[4]
+        
+        # If we haven't seen this worker yet, create their entry
+        if worker_id not in workers_dict:
+            workers_dict[worker_id] = {
+                "worker_id": worker_id,
+                "name": name,
+                "role": role,
+                "skills": [] # Start with an empty list for skills
+            }
+            
+        # Append the skill to the worker's skills list (checking if it's not None)
+        if skill:
+            workers_dict[worker_id]["skills"].append(skill)
+            
+    # Convert the grouped dictionary values back into the final list format
+    data = list(workers_dict.values())
+
+    return Response(data)
+
+@api_view(['GET'])
+def get_all_facilities(request):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT id, name, type
+        FROM health_facility
     """)
     
     rows = cursor.fetchall()
@@ -676,9 +883,37 @@ def get_suppliers(request):
         {
             "id": row[0],
             "name": row[1],
-            "address": row[2],
-            "city": row[3],
-            "state": row[4]
-        } for row in rows
+            "type": row[2]
+        }
+        for row in rows
     ]
     return Response(data)
+
+@api_view(['GET'])
+@permission_classes([IsOwnerCitizenOrStaff])
+def get_facility_contacts(request, facility_id):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT id, email, phone, is_primary
+        FROM healthfac_contact 
+        WHERE healthfac_id = %s
+    """, [facility_id])
+    
+    rows = cursor.fetchall()
+    data = [
+        {
+            "id": row[0],
+            "email": row[1],
+            "phone": row[2],
+            "is_primary": row[3]
+        }
+        for row in rows
+    ]
+    return Response(data)
+
+@api_view(['DELETE'])
+@permission_classes([IsRole('admin')])
+def delete_facility_contact(request, id):
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM healthfac_contact WHERE id = %s", [id])
+    return Response({"status": "deleted"})

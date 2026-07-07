@@ -25,7 +25,11 @@ const DischargePatient = () => {
     
     try {
       console.log(localStorage.getItem("fac_id"));
-      await api.post('api/discharge/', { visit_id: visitId, facility_id: localStorage.getItem("facility_id")});
+      const result = await api.post('api/discharge/', { visit_id: visitId, facility_id: localStorage.getItem("facility_id")});
+      console.log(result)
+      if (result.status != 200){
+        setMessage("Discharge failed")
+      }
       setSuccess(true);
     } catch (err) {
       console.error('Discharge failed', err);
