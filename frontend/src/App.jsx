@@ -36,6 +36,7 @@ import LogUsage from './pages/LogUsage';
 import FacilityWorkers from './pages/FacilityWorkers';
 import PendingLabOrders from './pages/PendingLabOrders';
 import LabResultUpload from './pages/LabResultUpload';
+import AvailableFacilities from './pages/AvailableFacilities';
 
 function PatientWrapper() {
   const { citizenId } = useParams();
@@ -98,6 +99,9 @@ function App() {
                 )}
                 {currentUser.role === 'admin' && (
                   <Link to="/facility-workers" className="hover:text-white transition-colors">Facility Workers</Link>
+                )}
+                {currentUser.role === 'admin' && (
+                  <Link to="/available" className="hover:text-white transition-colors">Facility Occupancy & Availibility</Link>
                 )}
               </div>
             </div>
@@ -215,6 +219,9 @@ function App() {
               } />
               <Route path="/facility-workers" element={
                 <RequireRole roles={['admin']} user={currentUser}><FacilityWorkers /></RequireRole>
+              } />
+              <Route path="/available" element={
+                <RequireRole roles={['admin', 'worker']} user={currentUser}><AvailableFacilities /></RequireRole>
               } />
 
               <Route path="*" element={<Navigate to={getHomeRoute(currentUser.role)} replace />} />
