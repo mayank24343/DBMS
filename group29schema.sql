@@ -70,7 +70,7 @@ CREATE TABLE item (
 );
 
 CREATE TABLE healthcareworker (
-    id BIGINT UNSIGNED,
+    id BIGINT UNSIGNED PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     role VARCHAR(50) NOT NULL,
 	FOREIGN KEY (id) references users(userid)
