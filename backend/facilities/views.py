@@ -11,10 +11,7 @@ from datetime import date, timedelta
 from django.db.models.functions import ExtractMonth
 
 from datetime import datetime
-import pytz
 
-ist = pytz.timezone('Asia/Kolkata')
-today = datetime.now(ist).date()
 
 @api_view(['GET'])
 def get_facility(request, id):
