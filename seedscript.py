@@ -357,29 +357,6 @@ cities = [
 ("Chennai","Tamil Nadu"),("Jaipur","Rajasthan"),("Kolkata","West Bengal"),("Pune","Maharashtra")
 ]
 
-#40 suppliers 
-for i in range(1,41):
-    index = i 
-    f.write(f"INSERT INTO users(userid,password_hash,role) VALUES ({index},'{DEFAULT_HASH}','supplier');\n")
-
-    city,state=random.choice(cities)
-    lat=round(random.uniform(12,29),6)
-    lon=round(random.uniform(72,88),6)
-
-    f.write(f"""INSERT INTO supplier VALUES ({index},'Supplier{i}',
-'Building {i}',NULL,'{city}','{state}','{random.randint(100000,999999)}',{lat},{lon});\n
-""")
-    f.write(f"""INSERT INTO supplier_contact VALUES (default,{index},'sup{i}@gmail.com',NULL,TRUE);\n
-""")
-    f.write(f"""INSERT INTO supplier_contact VALUES (default,{index},NULL,'{random.randint(10**9,10**10-1)}',FALSE);\n
-""")
-    f.write(f"""INSERT INTO listing VALUES (default, {index}, {index}, {random.randint(5,30)*100}, {random.randint(200,5000)});\n""")
-    for k in range(1,index):
-        if (random.randint(1,10) > 7):
-            f.write(f"""INSERT INTO listing VALUES (default, {index}, {k}, {random.randint(5,30)*100}, {random.randint(200,5000)});\n""")
-    for k in range(index+1,40):
-        if (random.randint(1,10) > 7):
-            f.write(f"""INSERT INTO listing VALUES (default, {index}, {k}, {random.randint(5,30)*100}, {random.randint(200,5000)});\n""")
 
 wards = ['General', 'ICU', 'Surgical', 'Emergency', 'Maternity', 'Pediatric', 'CCU', 'Burn', 'Psychiatric']
 vacc_places = []
@@ -541,24 +518,6 @@ for i in range(10):
             f.write(f"""INSERT INTO works VALUES(default,{wid},{i*10+j},'2020-01-01',NULL);\n""")
             f.write(f"""INSERT INTO skills VALUES(default,{wid},'B.Sc. Microbiology','qualification');\n""")
         labs.append(i*10+j)
-
-#warehouses
-for i in range(10,20):
-    city,state=cities[i-10]
-    for j in range(1,6):
-        lat=round(random.uniform(12,29),6)
-        lon=round(random.uniform(72,88),6)
-        f.write(f"""INSERT INTO place VALUES ({100+(i-10)*5+j},'Street {i*10+j}',NULL,'{city}','{state}','{random.randint(100000,999999)}',{lat},{lon});\n""")
-        f.write(f"""INSERT INTO warehouse VALUES ({100+(i-10)*5+j});\n""")
-        f.write(f"""INSERT INTO warehouse_contact VALUES (default,{100+(i-10)*5+j},'ware{100+(i-10)*5+j}@gmail.com',NULL,FALSE);\n""")
-        f.write(f"""INSERT INTO warehouse_contact VALUES (default,{100+(i-10)*5+j},NULL,'{random.randint(10**6,10**7-1)*1000+100+(i-10)*5+j}',TRUE);\n""") 
-
-        for k,(t,x,d) in enumerate(medicines,1):
-            f.write(f"INSERT INTO inventory VALUES (default,{100+(i-10)*5+j},{k},{random.randint(20,50)*100},'{rand_date(datetime(2026,1,1),datetime(2028,1,1)).date()}',default);\n")
-        for k,(t,d) in enumerate(vaccines,1):
-            f.write(f"INSERT INTO inventory VALUES (default,{100+(i-10)*5+j},{20+k},{random.randint(20,50)*100},'{rand_date(datetime(2026,1,1),datetime(2028,1,1)).date()}',default);\n")
-        for k in range(1,11):
-            f.write(f"INSERT INTO inventory VALUES (default,{100+(i-10)*5+j},{30+k},{random.randint(20,50)*100},'9999-12-31',default);\n")        
 
 
 vid = 0
