@@ -22,10 +22,6 @@
 * **Longitudinal Records:** Unified medical history including prescriptions, lab results, and vaccination status.
 * **Appointment Engine:** Real-time booking at the nearest available health center.
 
-### 📦 Medical Supply Chain
-* **Inventory Tracking:** Separate warehouse and center-level management for vaccines and medicines.
-* **Smart Alerts:** Automated tracking of **expiry dates** and stock levels to prevent wastage.
-
 ### 🏥 Hospital & Workforce Management
 * **Resource Monitoring:** Real-time tracking of bed availability (General, Emergency, ICU).
 * **Inter-facility Transfers:** Streamlined workflows for patient transfers between hospitals.
@@ -33,7 +29,6 @@
 
 ### 📊 Disease Surveillance & Analytics
 * **Geographic Reporting:** Real-time case reporting by verified healthcare workers.
-* **Heatmaps:** Visual tracking of disease spread across different regions.
 
 ---
 
