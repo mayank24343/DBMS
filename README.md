@@ -12,7 +12,8 @@
 ---
 ## Live Demo Login Details
 * [Access the demo here](https://national-health-portal.vercel.app)
-* Admin ID: 2000, Citizen ID: 1343, Healthcare Worker: 41
+* Admin ID: 2000, Citizen ID: 1343, Healthcare Worker ID: 41
+* Password: 'password'
 
 ## 🚀 Key Modules
 
