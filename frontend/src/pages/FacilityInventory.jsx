@@ -224,11 +224,7 @@ const FacilityInventory = () => {
                       </td>
                       <td className="px-8 py-6 text-right">
                         <div className="flex gap-2 justify-end">
-                          <Link to="/best-supplier">
-                            <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all">
-                              Find Suppliers
-                            </button>
-                          </Link>
+                        
                           <Link to="/log-usage">
                             <button className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all">
                               Log Usage →
