@@ -6,12 +6,12 @@
 
 --- 
 * An enterprise-grade national digital platform designed to integrate public healthcare stakeholders into a unified, real-time ecosystem. From **Supply Chain Management** to **Disease Surveillance**, INHIS ensures data-driven decision-making for public health.
-* [Live Demo](national-health-portal.vercel.app)
+* [Live Demo](https://national-health-portal.vercel.app)
 * [Demo Video](https://youtu.be/T0tmpmn-bko)
 * [Slide Show](https://canva.link/wv3wg9ancpbhri9)
 ---
 ## Live Demo Login Details
-* [Access the demo here](national-health-portal.vercel.app)
+* [Access the demo here](https://national-health-portal.vercel.app)
 * Admin ID: 2000, Citizen ID: 1343, Healthcare Worker: 41
 
 ## 🚀 Key Modules
