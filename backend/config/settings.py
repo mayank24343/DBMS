@@ -1,7 +1,10 @@
 import os
 from pathlib import Path
+import dj_database_url
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / '.env')
 
 # --- Security-critical settings, now environment-driven ---
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-8as$n8hmv26d63xo0g*8b!#!)ed0^ob4-0an0x(+6rbag0-p+e')
@@ -71,21 +74,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# --- Database: credentials now environment-driven ---
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('DB_NAME', 'inhis'),
-        'USER': os.environ.get('DB_USER', 'root'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '3306'),
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES', transaction_isolation='READ-COMMITTED'",
-        },
-        'ATOMIC_REQUESTS': True,
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL', ''),
+        conn_max_age=600,
+    )
 }
+
+# dj_database_url doesn't know about your custom OPTIONS/ATOMIC_REQUESTS —
+# add those back in after parsing:
+DATABASES['default']['OPTIONS'] = {
+    'init_command': "SET sql_mode='STRICT_TRANS_TABLES', transaction_isolation='READ-COMMITTED'",
+}
+DATABASES['default']['ATOMIC_REQUESTS'] = True
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
